@@ -40,5 +40,3 @@ Check for issues in model comparison in multilevel models (224-225) - problems w
 https://stats.stackexchange.com/questions/418107/converting-log-standard-deviation-in-terms-of-the-original-units -  log standard deviation interpretation and conversion
 
 ## Multilevel model
-
-- WHat do prior
