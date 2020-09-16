@@ -39,4 +39,8 @@ Check for issues in model comparison in multilevel models (224-225) - problems w
 
 https://stats.stackexchange.com/questions/418107/converting-log-standard-deviation-in-terms-of-the-original-units -  log standard deviation interpretation and conversion
 
+
+## How to standardise test data 
+https://stats.stackexchange.com/questions/174823/how-to-apply-standardization-normalization-to-train-and-testset-if-prediction-i
+
 ## Multilevel model
