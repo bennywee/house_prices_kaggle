@@ -1,11 +1,11 @@
 // Dummy variable model for predicting housing prices
 data {
-    int<lower=1> N; // Number of rows
+    int N; // Number of rows
     vector[N] log_sales_price; // log sales price
     vector[N] log_lot_area; // log lot area
     int neighbourhood[N]; // neighbourhood categorical variable
     int N_neighbourhood; // number of neighbourhood categories
-    int<lower=1> N_test; // Number of rows
+    int N_test; // Number of rows
     vector[N_test] log_lot_area_test; // log lot area test data
     int neighbourhood_test[N_test]; // neighbourhood categorical variable test data
     real alpha_sd;
@@ -39,7 +39,7 @@ generated quantities {
           y_hat[n] = normal_rng(alpha[neighbourhood[n]] + beta * log_lot_area[n], sigma);      
         }
     for(n in 1:N_test){
-        y_test[n] = normal_rng(alpha[n] + beta * log_lot_area_test[n], sigma);
+          y_test[n] = normal_rng(alpha[neighbourhood_test[n]] + beta * log_lot_area_test[n], sigma);
         }
     }
 }
