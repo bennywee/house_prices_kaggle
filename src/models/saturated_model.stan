@@ -1,4 +1,4 @@
-// Dummy variable model for predicting housing prices
+// Saturated model (interactive effects + dummies) for predicting housing prices
 data {
     int N; // Number of rows
     vector[N] log_sales_price; // log sales price
