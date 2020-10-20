@@ -8,7 +8,6 @@ data {
     int N_test; // Number of rows
     vector[N_test] log_lot_area_test; // log lot area test data
     int neighbourhood_test[N_test]; // neighbourhood categorical variable test data
-    real beta_sd;
     int<lower = 0, upper = 1> run_estimation; // Set to zero for prior predictive checks, set to one to evaluate likelihood
 }
 parameters {

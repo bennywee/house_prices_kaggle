@@ -1,16 +1,22 @@
 // Dummy variable model for predicting housing prices
 data {
-    int N; // Number of rows
+    int<lower=0> N; // Number of rows
+    int<lower=0> neighbourhood[N]; // neighbourhood categorical variable
+    int<lower=0> N_neighbourhood; // number of neighbourhood categories
     vector[N] log_sales_price; // log sales price
     vector[N] log_lot_area; // log lot area
-    int neighbourhood[N]; // neighbourhood categorical variable
-    int N_neighbourhood; // number of neighbourhood categories
-    int N_test; // Number of rows
-    vector[N_test] log_lot_area_test; // log lot area test data
+
+    // out of sample prediction
+    int<lower=0> N_test; // Number of rows
     int neighbourhood_test[N_test]; // neighbourhood categorical variable test data
+    vector[N_test] log_lot_area_test; // log lot area test data
+    
+    // Adjust scale parameters
     real alpha_sd;
     real beta_sd;
-    int<lower = 0, upper = 1> run_estimation; // Set to zero for prior predictive checks, set to one to evaluate likelihood
+    
+    // Set to zero for prior predictive checks, set to one to evaluate likelihood
+    int<lower = 0, upper = 1> run_estimation;
 }
 parameters {
     vector[N_neighbourhood] alpha;

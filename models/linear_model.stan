@@ -5,9 +5,13 @@ data {
     vector[N] log_lot_area; // log lot area
     real alpha_sd;
     real beta_sd;
-    int<lower = 0, upper = 1> run_estimation; // Set to zero for prior predictive checks, set to one to evaluate likelihood
-    int N_new;
-    vector[N_new] x_new;
+    
+    // out of sample prediction
+    int N_test;
+    vector[N_test] log_lot_area_test;
+    
+    // Set to zero for prior predictive checks, set to one to evaluate likelihood
+    int<lower = 0, upper = 1> run_estimation;
 }
 parameters {
     real alpha;
@@ -30,14 +34,14 @@ model {
 generated quantities {
     vector[N] log_lik;
     vector[N] y_hat;
-    vector[N_new] y_new;
+    vector[N_test] y_test;
     {
     for(n in 1:N){
           log_lik[n] = normal_lpdf(log_sales_price | alpha + beta * log_lot_area[n], sigma);
           y_hat[n] = normal_rng(alpha + beta * log_lot_area[n], sigma);      
         }
-    for(n in 1:N_new){
-        y_new[n] = normal_rng(alpha + beta * x_new[n], sigma);
+    for(n in 1:N_test){
+        y_test[n] = normal_rng(alpha + beta * log_lot_area_test[n], sigma);
         }
     }
 }

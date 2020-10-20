@@ -8,7 +8,6 @@ data {
     int N_test; // Number of rows
     vector[N_test] log_lot_area_test; // log lot area test data
     int neighbourhood_test[N_test]; // neighbourhood categorical variable test data
-    real beta_sd;
     int<lower = 0, upper = 1> run_estimation; // Set to zero for prior predictive checks, set to one to evaluate likelihood
 }
 parameters {
@@ -21,9 +20,9 @@ parameters {
 model {
     // Priors
     target += normal_lpdf(alpha_j | alpha, std);
-    target += normal_lpdf(alpha | 1, 0.1);
+    target += normal_lpdf(alpha | 1, 0.01);
     target += normal_lpdf(std | 0, 1);
-    target += normal_lpdf(beta | 0, beta_sd);
+    target += normal_lpdf(beta | 0, 0.1);
     target += normal_lpdf(sigma |0, 1);
     
     // Likelihood
