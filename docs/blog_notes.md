@@ -17,7 +17,7 @@
     
     - This workflow is _not_ exhaustive of all diagnostics and steps that can be taken. Post would be too long. Some steps won't have a problem with such simple models. Treatment and suggested fixes may be addressed in a future post
     
-    - Why is workflow important? This was typically overlooked in my statistics/econometrics courses. Often course curriculus revolved around understanding and proving different statistical tools, tests and algorithms. There is nothing wrong with this, there are finite resources and probably in infinite amount of new things to learn. 
+    - Why is workflow imporcotant? This was typically overlooked in my statistics/econometrics courses. Often course curriculus revolved around understanding and proving different statistical tools, tests and algorithms. There is nothing wrong with this, there are finite resources and probably in infinite amount of new things to learn. 
     
     - However, applied statistical modelling is 
     
