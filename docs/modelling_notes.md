@@ -1,7 +1,7 @@
 # Modelling notes
 
 ## Start with univariate linear model - basic design choices and transformations
-By taking the log of $\beta_{LotArea}$, I assume the relationship between LotArea and SalesPrice is _strictly positive_. Is there a linear relationship by the logs of the variables? Interrogate linearity as an assumption a bit more rigorously (Hill, podcast).
+<!--By taking the log of $\beta_{LotArea}$, I assume the relationship between LotArea and SalesPrice is positive? (what did i mean by this...).--> Is there a linear relationship by the logs of the variables? Interrogate linearity as an assumption a bit more rigorously (Hill, podcast).
 
 Plot relationship between sales price and lot area. On log and real scales for prior predictive checks - log/real prior distributions or data? Maybe do both. Log normal prior on lotarea. 
 
@@ -44,3 +44,5 @@ https://stats.stackexchange.com/questions/418107/converting-log-standard-deviati
 https://stats.stackexchange.com/questions/174823/how-to-apply-standardization-normalization-to-train-and-testset-if-prediction-i
 
 ## Multilevel model
+
+- Check priors on varying slopes, prior predictive checks suggests priors are too diffuse. 
