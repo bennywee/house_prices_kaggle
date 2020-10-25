@@ -1,0 +1,96 @@
+---
+title: "Applying a bayesian workflow (I)"
+author: "Benjamin Wee"
+date: "21/10/2020"
+output: 
+  html_document:
+    theme: cosmo
+    code_folding: show
+    df_print: paged
+---
+
+<style type="text/css">
+  body{
+  font-size: 12pt;
+}
+</style>
+
+<!--"A technical post aimed at DSs/statisticians. I do not cover what bayesian statistics is, its distinction from frequentist statistics or machine learning nor why it's useful and why fitting bayesian models are useful. There are numerous other posts on that matter. Although the various types of output and model inferences that can be made will be talked about in another post"-->
+
+I spent the last few years studying Bayesian statistics in my spare time. Most recently I completed the first edition of Richard McElreath's Statistical Rethinking - including his 2017 lecture series and problem sets. This on going learning is complemented by reading numerous tutorials and case studies from the statistics community plus documentation for probabilistic programming languages (Stan and PyMC3).
+
+A recurring theme from members of the bayesian community is the importance of _workflow_. My formal education in econometrics placed more emphasis on tools and derivations for applied predictive or causal inference. "Workflow" or the _structure_ of data analysis and model building was not explicitly covered. 
+
+I decided to writeup an example of using a bayesian workflow using a dataset from kaggle. The proposed workflow I adoped was inspired from [blog posts](https://khakieconomics.github.io/2016/08/29/What-is-a-modern-statistical-workflow.html) by Jim Savage a few years ago and more recently Monica Alexander's [example](https://www.monicaalexander.com/posts/2020-28-02-bayes_viz/) of visualiastion in an end to end bayesian analysis. This was reinforced by the visualisation in bayesian workflow paper by
+
+
+<!--
+-->
+<!--
+the lead developers in probabilistic programming and
+
+My formal education in statistics/econometrics placed less emphasis on workflow or how to structure data analysis and model building. This is not a dig at any course curriculum -- I am very grateful for everything I learned and how it set me up to learn in the space of quantitative analysis. placed more emphasis on tools and derivations for applied predictive or causal inference. 
+
+This is not a dig at any curriculum -- there are finite resources and a growing list of things to learn and evolving practices. 
+-->
+
+## So why is thinking about workflow important?
+
+A principled workflow supports quality model building. It provides a set of sensible defaults which help evaluate the assumptions of model design and identify errors. That isn't to say there is a gold standard of how all data analysis should be conducted. Rather, workflow guides modelling decisions and helps diagnose problems when iterating on model complexity.
+
+<!--Rather, it is a set of guidelines on how to approach modelling so that it is best placed to help answer domain specific questions. It is also a good way of iterating on model complexity.-->
+
+> "Practical Bayesian data analysis, like all data analysis, is an iterative process of model building, inference, model checking and evaluation, and model expansion" - [Gabry, Simpson, Vehtari, Betancourt, Gelman (2019)](https://arxiv.org/pdf/1709.01449.pdf)
+
+The proposed workflow I adoped was inspired from [blog posts](https://khakieconomics.github.io/2016/08/29/What-is-a-modern-statistical-workflow.html) by Jim Savage a few years ago and more recently Monica Alexander's [example](https://www.monicaalexander.com/posts/2020-28-02-bayes_viz/) of visualiastion in an end to end bayesian analysis. This was reinforced by the visualisation in bayesian workflow paper quoted above.
+
+### **Steps in proposed workflow**
+
+1)  **Exploratory data analysis and data transformation**
+
+2)  **Write out full probability model**
+
+3)  **Prior predictive checks - simulate fake data from the implied generative model**
+
+4)  **Fit model on fake data**
+
+5)  **Estimate model on real data**
+
+6) Check whether MCMC sampler ran efficiently
+
+7) **Posterior predictive check to evaluate model fit**
+
+8) Model selection using cross validation and information criteria
+
+Steps in bold are what we will be discussed in detail with an example in this post. The others will be explored in more detail with more complicated models. For the curious, more robust and detailed methods can be found in the [Stan case studies](https://mc-stan.org/users/documentation/case-studies), in particular Michael Betancourt's case study on a [Principled Bayesian Workflow](https://betanalpha.github.io/assets/case_studies/principled_bayesian_workflow.html#1_questioning_authority).
+
+<!--Note, this a minimal working example of a bayesian workflow and the rationale for its steps. Much more robust and detailed methods can be found in the [Stan case studies](https://mc-stan.org/users/documentation/case-studies), in particular Michael Betancourt's case study on a [Principled Bayesian Workflow](https://betanalpha.github.io/assets/case_studies/principled_bayesian_workflow.html#1_questioning_authority).-->
+
+# Predicting housing prices
+
+I decided to apply this workflow on the Ames Housing Dataset from the kaggle competition [House Prices: Advanced Regression Techniques](https://www.kaggle.com/c/house-prices-advanced-regression-techniques/overview). The objective of this competition was to predict the `SalePrice` and minimise RMSE in the test dataset. The objective of this post however, is to start with a set of simple models to motivate the intuition of the workflow, as opposed to building something which optimises out of sample predictive performance. 
+
+## 1) Exploratory data analysis and data transformation
+
+
+
+To keep things simple, I focused on variables which describe any _structure_ in the dataset in relation to the `SalePrice`. That is,  whether or not there are nested levels or clusters within the data in relation to the dependent variable as opposed to running full feature selection or dimensionality reduction (there are 79 features in the raw data). 
+
+
+<!--
+Furthermore, I focused on variables which made sense to me 
+
+
+The dataset is contains 80 variables and 1460 rows, with the dependent (target) variable being the `SalePrice`. The 79 other features describe various characteristics of the dwelling. 
+
+
+In this post, by following and practising steps promoted by other authors, I was able to more easily debug my own issues and identify problems with my own assumptions. 
+
+This is by no means a full data analysis which attempts to give the _best_ out of sample predictive performance. Rather, it is a way of practising
+
+and identifying errors + evaluating assumptions. 
+
+I've taken what i learnt in SR and applied it to a kaggle dataset using a recommended bayesian workflow - in the spirit of being principled with my current state of knowledge. This has been inspried by JSs blog posts and more recently, MA's blog post and the visualisation paper. I do my best to replicate a robust analysis outlined by these resources. However, I stop short of MB's notebook (I still have a lot to learn!)
+
+Why? To practice and understand bayesian modelling in the context of problems - to provide my own analysis. Improve probabilistic programming.
+Stan flexible programming language. Easy to add complexity. Can run through Python and R (as opposed to language specificbrms and pymc3)-->
