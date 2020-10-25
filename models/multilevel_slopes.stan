@@ -24,7 +24,7 @@ transformed parameters {
   vector[2] v_a_b_nh[N_neighbourhood]; // Vector of adaptive priors for alpha and beta
   cov_matrix[2] sigma_rho; // Covariance matrix
   for (n in 1:N_neighbourhood) v_a_b_nh[n,1:2] = [alpha_j[n], beta_j[n]]'; // Fill adaptive priors matrix with the adaptive parameters
-  sigma_rho = quad_form_diag(Rho,sigma_nh);
+  sigma_rho = quad_form_diag(Rho, sigma_nh);
 }
 model {
     vector[N] mu;
@@ -34,7 +34,7 @@ model {
     target += normal_lpdf(beta | 0, 0.1);
     target += normal_lpdf(sigma |0, 1);
     target += normal_lpdf(sigma_nh | 0 , 1);
-    target += lkj_corr_lpdf(Rho | 4);
+    target += lkj_corr_lpdf(Rho | 10);
     
     // linear model  
     for(n in 1:N) mu[n] = alpha_j[neighbourhood[n]] + beta_j[neighbourhood[n]] * log_lot_area[n];

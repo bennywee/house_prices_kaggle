@@ -8,7 +8,7 @@ data {
 
     // out of sample prediction
     int<lower=0> N_test; // Number of rows
-    int neighbourhood_test[N_test]; // neighbourhood categorical variable test data
+    int<lower=0> neighbourhood_test[N_test]; // neighbourhood categorical variable test data
     vector[N_test] log_lot_area_test; // log lot area test data
     
     // Adjust scale parameters

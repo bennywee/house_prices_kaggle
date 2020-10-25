@@ -47,7 +47,7 @@ model {
     target += normal_lpdf(sigma_nh | 0 , sigma_nh_sd);
     target += lkj_corr_lpdf(Rho | Rho_eta);
     
-    target += multi_normal_lpdf(vector_nh | [1, 0], Rho);
+    target += multi_normal_lpdf(vector_nh | rep_vector(0, 2), Rho);
     
     // linear model
     alpha_nh = alpha + za_nh[neighbourhood] * sigma_nh[1];
