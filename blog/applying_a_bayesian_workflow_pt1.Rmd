@@ -15,15 +15,27 @@ output:
 }
 </style>
 
-<!--"A technical post aimed at DSs/statisticians. I do not cover what bayesian statistics is, its distinction from frequentist statistics or machine learning nor why it's useful and why fitting bayesian models are useful. There are numerous other posts on that matter. Although the various types of output and model inferences that can be made will be talked about in another post"-->
+<!--"A technical post aimed at DSs/statisticians. I do not cover what bayesian statistics is, its distinction from frequentist statistics or machine learning nor why it's useful and why fitting bayesian models are useful. There are numerous other posts on that matter. Although the various types of output and model inferences that can be made will be talked about in another post"
+
+I've chosen to use [Stan](https://mc-stan.org/) to do my modelling. Stan is a probabilistic programming language that can fleixbly estimate a wide range of probabilistic and bayesian models. It uses state of the art samplers such as hamiltonian monte carlo (HMC) which allows efficient estimation of models with high dimensions without the need for conjugate priors. It is used across academia and industry and noteably in facebook's open source forecasting tool, [prophet](https://facebook.github.io/prophet/)
+
+-->
 
 I spent the last few years studying Bayesian statistics in my spare time. Most recently I completed the first edition of Richard McElreath's Statistical Rethinking - including his 2017 lecture series and problem sets. This on going learning is complemented by reading numerous tutorials and case studies from the statistics community plus documentation for probabilistic programming languages (Stan and PyMC3).
 
-A recurring theme from members of the bayesian community is the importance of _workflow_. My formal education in econometrics placed more emphasis on tools and derivations for applied predictive or causal inference. "Workflow" or the _structure_ of data analysis and model building was not explicitly covered. 
+A recurring theme from members of the bayesian community is the importance of workflow. My formal education in econometrics placed more emphasis on tools and derivations for applied predictive or causal inference. "Workflow" or the _structure_ of data analysis and model building was not explicitly covered. At best, components of workflow were explored in some applied research seminars.
 
-I decided to writeup an example of using a bayesian workflow using a dataset from kaggle. The proposed workflow I adoped was inspired from [blog posts](https://khakieconomics.github.io/2016/08/29/What-is-a-modern-statistical-workflow.html) by Jim Savage a few years ago and more recently Monica Alexander's [example](https://www.monicaalexander.com/posts/2020-28-02-bayes_viz/) of visualiastion in an end to end bayesian analysis. This was reinforced by the visualisation in bayesian workflow paper by
+So I decided to write up an example of applying a bayesian statistics workflow, using the Ames Housing Dataset from the kaggle competition [House Prices: Advanced Regression Techniques](https://www.kaggle.com/c/house-prices-advanced-regression-techniques/overview). The goal is to practice what I've learned in my self study journey so far and hopefully demonstrate some of the best practices advocated by those in the applied statistics community.
 
 
+<!--
+
+
+I decided to writeup an example of using a bayesian workflow using a dataset from kaggle. The proposed workflow I adoped was a mix of blogs and papers from prominent statisticians in the field. 
+
+inspired from [blog posts](https://khakieconomics.github.io/2016/08/29/What-is-a-modern-statistical-workflow.html) by Jim Savage a few years ago and more recently Monica Alexander's [example](https://www.monicaalexander.com/posts/2020-28-02-bayes_viz/) of visualiastion in an end to end bayesian analysis. This was reinforced by the visualisation in bayesian workflow paper by ...-->
+
+<!-- what is stan and why did i choose it? not brms/pymc3-->
 <!--
 -->
 <!--
@@ -40,9 +52,11 @@ A principled workflow supports quality model building. It provides a set of sens
 
 <!--Rather, it is a set of guidelines on how to approach modelling so that it is best placed to help answer domain specific questions. It is also a good way of iterating on model complexity.-->
 
-> "Practical Bayesian data analysis, like all data analysis, is an iterative process of model building, inference, model checking and evaluation, and model expansion" - [Gabry, Simpson, Vehtari, Betancourt, Gelman (2019)](https://arxiv.org/pdf/1709.01449.pdf)
+> "Practical Bayesian data analysis, like all data analysis, is an iterative process of model building, inference, model checking and evaluation, and model expansion" - [Visualisation Bayesian Workflow - Gabry, Simpson, Vehtari, Betancourt, Gelman (2019)](https://arxiv.org/pdf/1709.01449.pdf)
 
-The proposed workflow I adoped was inspired from [blog posts](https://khakieconomics.github.io/2016/08/29/What-is-a-modern-statistical-workflow.html) by Jim Savage a few years ago and more recently Monica Alexander's [example](https://www.monicaalexander.com/posts/2020-28-02-bayes_viz/) of visualiastion in an end to end bayesian analysis. This was reinforced by the visualisation in bayesian workflow paper quoted above.
+The proposed workflow I adopted was inspired from [blog posts](https://khakieconomics.github.io/2016/08/29/What-is-a-modern-statistical-workflow.html) by Jim Savage a few years ago and more recently, Monica Alexander's [example](https://www.monicaalexander.com/posts/2020-28-02-bayes_viz/) of visualiastion in an end to end bayesian analysis. This was reinforced by the visualisation in bayesian workflow paper quoted above.
+
+The bolded steps below will be discussed in this post. I have reserved the other steps for a separate blog post using more complicated models. For the curious, more detailed examples can be found in the [Stan case studies](https://mc-stan.org/users/documentation/case-studies), in particular, Michael Betancourt's case study on a [Principled Bayesian Workflow](https://betanalpha.github.io/assets/case_studies/principled_bayesian_workflow.html#1_questioning_authority).
 
 ### **Steps in proposed workflow**
 
@@ -62,20 +76,181 @@ The proposed workflow I adoped was inspired from [blog posts](https://khakiecono
 
 8) Model selection using cross validation and information criteria
 
-Steps in bold are what we will be discussed in detail with an example in this post. The others will be explored in more detail with more complicated models. For the curious, more robust and detailed methods can be found in the [Stan case studies](https://mc-stan.org/users/documentation/case-studies), in particular Michael Betancourt's case study on a [Principled Bayesian Workflow](https://betanalpha.github.io/assets/case_studies/principled_bayesian_workflow.html#1_questioning_authority).
-
 <!--Note, this a minimal working example of a bayesian workflow and the rationale for its steps. Much more robust and detailed methods can be found in the [Stan case studies](https://mc-stan.org/users/documentation/case-studies), in particular Michael Betancourt's case study on a [Principled Bayesian Workflow](https://betanalpha.github.io/assets/case_studies/principled_bayesian_workflow.html#1_questioning_authority).-->
 
-# Predicting housing prices
-
-I decided to apply this workflow on the Ames Housing Dataset from the kaggle competition [House Prices: Advanced Regression Techniques](https://www.kaggle.com/c/house-prices-advanced-regression-techniques/overview). The objective of this competition was to predict the `SalePrice` and minimise RMSE in the test dataset. The objective of this post however, is to start with a set of simple models to motivate the intuition of the workflow, as opposed to building something which optimises out of sample predictive performance. 
-
-## 1) Exploratory data analysis and data transformation
+# Predicting housing prices{.tabset .tabset-fade .tabset-pills}
 
 
+<!--
+The models I propose here are deliberately simple. I want to emphasise workflow, diagnostics and to interrogate my assumptions in model building. It is by no means a full analysis which intends to optimise predictive performance out of sample.
 
-To keep things simple, I focused on variables which describe any _structure_ in the dataset in relation to the `SalePrice`. That is,  whether or not there are nested levels or clusters within the data in relation to the dependent variable as opposed to running full feature selection or dimensionality reduction (there are 79 features in the raw data). 
+"Not a full data analysis"
 
+The target variable in this dataset is `SalePrice`. I focus on variables which describe any _structure_ (nested levels or clusters) in the dataset in relation to the `SalePrice` and are consistent with my understanding of how housing prices change in response to different characteristics. This is opposed to doing full variable selection on the 79 available features using algorithmic tools like PCA.
+
+The models I propose here are deliberately simple. I want to emphasise workflow, diagnostics and to interrogate my assumptions in model building. It is by no means a full analysis which intends to optimise predictive performance out of sample.
+
+The target variable in this dataset is `SalePrice`. To keep things simple, I focused on variables which describe any _structure_ in the dataset in relation to the `SalePrice`. That is,  whether or not there are nested levels or clusters within the data in relation to the dependent variable as opposed to running full feature selection or dimensionality reduction (there are 79 features in the raw data). 
+
+The objective of this post is to start with a simple set of models to motivate the intuition of the workflow. This is opposed to building something extremely complicated from the get go to optimise out of sample predictive performance.
+
+he objective of this competition was to predict the `SalePrice` and minimise RMSE in the test dataset. The objective of this post however, is to start with a set of simple models to motivate the intuition of the workflow, as opposed to building something which optimises out of sample predictive performance. -->
+
+## Python
+
+### 1) Exploratory data analysis and data transformation
+
+The full dataset for this competition contains 79 features to predict the target variable `SalesPrice`. For this exercise I will focus on two variables: `Neighbourhood` (categorical: physical locations within Ames city limits) and `LotArea` (positive real: lot size in square feet). I chose these variables as they are consistent with my undersatnding of how housing prices vary in relation to their location and the size of the land/lot. 
+
+```{python eval=FALSE}
+import pystan
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import arviz as az
+
+%matplotlib inline
+%config InlineBackend.figure_format = 'retina'
+
+az.style.use('arviz-darkgrid')
+
+df = pd.read_csv('../data/raw/train.csv').loc[['SalePrice', 'LotArea', 'Neighborhood']]
+
+df.head()
+```
+
+```{python include=FALSE}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+df = pd.read_csv('../data/raw/train.csv')[['SalePrice', 'LotArea', 'Neighborhood']]
+```
+
+```{r echo=FALSE}
+library(reticulate)
+library(kableExtra)
+head(py$df)
+```
+
+First we visualise the distribution of the target variable. We immediately see there is a positive skew in the distribution. Taking the natural log of this gives an approximately normal distribution.
+
+```{python eval=FALSE}
+import matplotlib.ticker as ticker
+
+fig, axes = plt.subplots(1, 2, figsize = (13, 5))
+df['SalePrice'].plot.hist(title = 'Sales Price', ax = axes[0])
+np.log(df['SalePrice']).plot.hist(title = 'log(Sales Price)', ax = axes[1])
+
+# Adjust x axis on both plots
+axes[0].set_xlim(1000, 800000)
+axes[0].xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: str(int(x/1000))))
+axes[0].set_xlabel("$('000)")
+
+axes[1].set_xlabel("Log prices")
+```
+
+<center>
+![](figures/1_histograms.svg)
+</center>
+
+A scatter plot shows a positive correlation between `log(SalePrice)` and `log(LotArea)` as expected. All else equal, property prices tend to be higher with larger land sizes. However, the univariate linear model clearly underfits the data and there is almost surely some unobserved confounder variable(s).
+
+```{python eval=FALSE}
+sns.lmplot(x='log_lot_area',y='log_sales_price',data=df,fit_reg=True, ci = False)
+plt.tight_layout()
+```
+
+<center>
+![](figures/2_pooling_scatter.svg)
+</center>
+
+A potential reason for this may be different neighbourhoods have on average higher prices than other neighbourhoods (which would result in different intercepts). Furthermore, the _association_ between housing prices and lot size may depend on different neighbourhood effects (varying slopes). For example, inner city neighbourhoods which have higher density housing or apartments may be relatively more expensive per square foot than outer suburban sprawls. We can visualise this in the small multiple plots below, observing the variation in linear trends between neighbourhoods.
+
+```{python, eval=FALSE}
+facet_scatter = sns.lmplot(x="log_lot_area", 
+                           y="log_sales_price", 
+                           col="Neighborhood",
+                           col_wrap = 5,
+                           data=df,
+                           ci = None, 
+                           truncate=False)
+
+facet_scatter.set(xlim=(5, 15))
+facet_scatter.set(ylim=(5, 15))
+```
+
+<center>
+![](figures/3_facet_scatter.svg)
+</center>
+
+We can see some variation in the slopes and intercepts as expected. Some suburbs have more observations than others. This and other unobserved confounders probably contributed to the negative slope in one of the neighbourhoods. The small sample size of some neighbourhoods will be prone to overfitting and noisy estimates which will require some regularisation. This is a prime candidate for _heirarchical_ or _multilevel_ models, which will allow us to use partial pooling to borrow information between neighbourhoods and regularise the effects of small sample sizes. These will be the models I introduce in the next post. For now, we have enough information to propose some basic candidate models. 
+
+### 2) Write out full probability model
+
+I propose 3 candidate models based on the brief EDA above. 
+
+1) OLS (pooled regression, ignoring the structure given by the `neighbourhood` variable)
+2) No pooling regression (dummy variables for neighbourhood)
+3) Saturated regression (interactive effects between $log(LotArea)_i$ and `neighbourhood`)
+
+Simple OLS will serve as our benchmark when measuring how well our subsequent models perform.
+
+#### Scale predictors
+
+First, we want to standardise our outcome and predictor variables. This will make it easier to assign priors for parameters and in turn make it easier to sample from the posterior.  It will also help produce model outputs that are more interpretable. I will center and scale $log(LotArea)_i$ by subtracting the mean of $log(LotArea)_i$ and dividing it by the standard deviation. 
+
+$$
+x_i = \frac{log(LotArea)_i - \overline{log(LotArea)}}{\sigma_{log(LotArea)}}
+$$
+
+Using unscaled predictors often results in the intercept being uninterpretable without the context of other model parameters. As a result, it is often highly correlated with the predictor coefficients and requires weak priors. The average value of the standardised variable becomes zero with standard deviation one. I can now interpret $\alpha$ as the mean outcome value when the predictors are at their average, now zero.
+
+I will divide $log(SP)_i$ by its mean value. The will make the average value of the outcome variable to be mean 1. Since SalePrice is on the log scale, a value of 1.1 for scaled $log(SP)_i$ can be interpreted as 10\% higher relative to the average value. 0.7 similarly can be interpreted as 70\% of the average value.
+
+$$
+y_i = \frac{log(SalesPrice)_i}{\overline{log(SalesPrice)}}
+$$
+
+### Selecting priors
+
+Following the advice of the [stan developers](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations), I have chosen weakly informative priors 
+
+<!-- My prior belief is that the conditional means from the sample is overstating the relationship of the "true" conditional mean - regularising prior-->
+
+### 3)  Prior predictive checks - simulate fake data from the implied generative model
+
+### 4)  Fit model on fake data
+
+### 5)  Estimate model on real data
+
+### 6) Check whether MCMC sampler ran efficiently
+
+### 7) Posterior predictive check to evaluate model fit
+
+### 8) Model selection using cross validation and information criteria
+
+## R
+
+### 1) Exploratory data analysis and data transformation
+
+### 2) Write out full probability model
+
+### 3)  Prior predictive checks - simulate fake data from the implied generative model
+
+### 4)  Fit model on fake data
+
+### 5)  Estimate model on real data
+
+### 6) Check whether MCMC sampler ran efficiently
+
+### 7) Posterior predictive check to evaluate model fit
+
+### 8) Model selection using cross validation and information criteria
+
+
+##{-}
 
 <!--
 Furthermore, I focused on variables which made sense to me 
