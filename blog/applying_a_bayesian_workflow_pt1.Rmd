@@ -5,7 +5,7 @@ date: "21/10/2020"
 output: 
   html_document:
     theme: cosmo
-    code_folding: show
+    code_folding: hide
     df_print: paged
 ---
 
@@ -66,7 +66,7 @@ The bolded steps below will be discussed in this post. I have reserved the other
 
 3)  **Prior predictive checks - simulate fake data from the implied generative model**
 
-4)  **Fit model on fake data**
+4)  **Fit model on fake data - can we recover the known parameters?**
 
 5)  **Estimate model on real data**
 
@@ -185,27 +185,75 @@ facet_scatter.set(ylim=(5, 15))
 ![](figures/3_facet_scatter.svg)
 </center>
 
-We can see some variation in the slopes and intercepts as expected. Some suburbs have more observations than others. This and other unobserved confounders probably contributed to the negative slope in one of the neighbourhoods. The small sample size of some neighbourhoods will be prone to overfitting and noisy estimates which will require some regularisation. This is a prime candidate for _heirarchical_ or _multilevel_ models, which will allow us to use partial pooling to borrow information between neighbourhoods and regularise the effects of small sample sizes. These will be the models I introduce in the next post. For now, we have enough information to propose some basic candidate models. 
+We can see some variation in the slopes and intercepts as expected. Some suburbs have more observations than others. This and other unobserved confounders probably contributed to the negative slope in one of the neighbourhoods. The small sample size of some neighbourhoods will be prone to overfitting and noisy estimates which will require some regularisation.  
 
 ### 2) Write out full probability model
 
-I propose 3 candidate models based on the brief EDA above. 
+There are 3 basic models we can use to approach this problem:
 
-1) OLS (pooled regression, ignoring the structure given by the `neighbourhood` variable)
-2) No pooling regression (dummy variables for neighbourhood)
-3) Saturated regression (interactive effects between $log(LotArea)_i$ and `neighbourhood`)
+1) Pooled OLS (ignores the structure given my `neighbourhood`, assumes all observations come from "one neighbourhood")
+2) No pooling OLS (assumes independence between features)
+3) Saturated regression (adds interactive effects between `log(LotArea)_i` and `neighbourhood` to no pooling OLS)
 
-Simple OLS will serve as our benchmark when measuring how well our subsequent models perform.
+I will use the no pooling OLS model to demonstrate rest of the workflow. These models can certainly be improved on. In fact, this problem is a good candidate for _heirarchical_ or _multilevel_ models. This allows information to be borrowed between neighbourhood through partial pooling and removes the assumption of independence. This will be extremely useful given that the sample is imbalanced across `neighbourhood` and will help regularise the effects of small sample sizes. I will introduce this in the next post. 
 
-#### Scale predictors
+### Model specification
 
-First, we want to standardise our outcome and predictor variables. This will make it easier to assign priors for parameters and in turn make it easier to sample from the posterior.  It will also help produce model outputs that are more interpretable. I will center and scale $log(LotArea)_i$ by subtracting the mean of $log(LotArea)_i$ and dividing it by the standard deviation. 
+The no pooling or dummy variable regression is written out below, where i indexes the property and j indexes each neighbourhood. I've assigned a gaussian likelihood which assumes that the residuals are normally distributed. 
+
+$$
+y_i \sim Normal(\mu_i, \sigma) \\
+ \\
+\mu_i = \alpha_{j} + \beta * x_i \\
+$$
+Where $y_i$ is `log(SalesPrice)` scaled by it's mean value and $x_i$ is `log(LotArea)` scaled to mean 0 and standard deviation 1. Scaling $y_i$ like this makes the average value of the outcome variable to be mean 1. Since SalePrice is on the log scale, a value of 1.1 for  $y_i$ can be interpreted as 10\% higher relative to the average value. Similarly, 0.7 can be interpreted as 70\% of the average value.
+
+$$
+y_i = \frac{log(SalesPrice)_i}{\overline{log(SalesPrice)}}\\
+x_i = \frac{log(LotArea)_i - \overline{log(LotArea)}}{\sigma_{log(LotArea)}}
+$$
+
+Standardising both outcome and predictor variables makes sampling from the posterior distribuion easier when we fit the model. If we had more continuous regressors, we could also compare the parameteres on the same scale. Standardising also plays an important role in setting priors as we'll see below.
+
+<!-- Potential question: Why different scaling? For y, using mean 0 and std 1. Index variable allows us to assign the same prior to all categories-->
+
+### Selecting priors
+
+We need to assign distributions to the parameters for this to be a probability or bayesian model. I have chosen weakly informative priors following the advice of the [stan developers](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations). I do not have domain expertise in this specific dataset to give more informative priors. I do have some understanding of how property prices worked which guided my intital EDA. However, I can still choose sensible priors that at least regularlise model results and are within the plausible outcome space.
+
+We know that the variance parameter over $\sigma$ is defined over positive reals. So our prior should only put probabilistic weight on possible values. In this case I've chosen a Half normal distribution which has thinner tails than other candidate priors such as the exponential or half-cauchy distributions.
+
+For $\beta$ we want to assign weakly informative priors to hedge against overfitting. $\beta=0$ implies that on average, there is no association between sales price and lot area. Without much prior information I want to shrink $\beta$ closer towards zero. So all we really want to do is to assign probability to all plausible values of $\beta$ in this particular model, with less weight on extreme relationships. 
+
+$\alpha_j$ is the intercept for the $j^{th}$ neighbourhood. In a simple linear (pooled) regression between price and lot area, the intercept $\alpha$ (ignoring the neighbourhood means ignoring the j subscript) would be interpreted as the value of of $y$ when $x$ is 0. Since $x$ has a mean of zero, $\alpha$ has the additional interpretation as "the value of $y$ when $x$ is equal to its sample mean". By construction, $\alpha$ must be 1, the sample mean of $y$.
+
+So in the case of $\alpha_j$ I set a normal prior with a mean of 1 and a standard deviaion of 0.01 for all neighbourhoods, tightly regularising all neighbourhood effects to the sample mean of $y$. Standardising the variables made this much easier.
+
+In summary, weakly regulating priors express my belief that the parameters of this model would overfit the sample and that we need to regularise their effects. Standardising the variables made this job much easier and intuitive. 
+
+All together the full model looks like:
+
+$$
+y_i \sim Normal(\mu_i, \sigma) \\
+\mu_i = \alpha_{j} + \beta * x_i \\
+\alpha_j\sim Normal(1, 0.01)\\
+\beta\sim Normal(0, 0.1) \\
+\sigma\sim Normal_{+}(0,1)
+$$
+
+
+<!--Using unscaled predictors often results in the intercept being uninterpretable without the context of other model parameters. As a result, it is often highly correlated with the predictor coefficients and requires weak priors. -->
+
+<!--
+#### Scaled variables
+
+First, we want to standardise our outcome and predictor variables.  This will make it easier to assign priors for parameters and sample from the posterior for model estimation.  It will also help produce model outputs that are more interpretable and if this model had more continuous variables, for coefficients to be compared on the same scale. 
+
+I will center and scale $log(LotArea)_i$ by subtracting the mean of $log(LotArea)_i$ and dividing it by the standard deviation. The average value of the standardised variable becomes zero with standard deviation one. I can now interpret $\alpha$ as the mean outcome value when the predictors are at their average, now zero.
 
 $$
 x_i = \frac{log(LotArea)_i - \overline{log(LotArea)}}{\sigma_{log(LotArea)}}
 $$
-
-Using unscaled predictors often results in the intercept being uninterpretable without the context of other model parameters. As a result, it is often highly correlated with the predictor coefficients and requires weak priors. The average value of the standardised variable becomes zero with standard deviation one. I can now interpret $\alpha$ as the mean outcome value when the predictors are at their average, now zero.
 
 I will divide $log(SP)_i$ by its mean value. The will make the average value of the outcome variable to be mean 1. Since SalePrice is on the log scale, a value of 1.1 for scaled $log(SP)_i$ can be interpreted as 10\% higher relative to the average value. 0.7 similarly can be interpreted as 70\% of the average value.
 
@@ -215,9 +263,14 @@ $$
 
 ### Selecting priors
 
-Following the advice of the [stan developers](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations), I have chosen weakly informative priors 
+I have chosen weakly informative priors following the advice of the [stan developers](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations). I do not have domain expertise in this specific dataset to give more informative priors. I do have some understanding of how property prices worked which guided my intital EDA. However, I can still choose sensible priors that at least regularlise model results and are within the plausible outcome space.
 
-<!-- My prior belief is that the conditional means from the sample is overstating the relationship of the "true" conditional mean - regularising prior-->
+Standardising the variables above makes it easier for me to choose weakly informative and regularising priors. I know that $\alpha$ is the average value of $y_i$ when $x_i$ is at its sample mean. So by definition, the value of $\alpha$ in this model must be 1, which is the sample mean of $log(SP)_i$. Hence I should put extremely tight priors on $\alpha$ as there are no other plausible values but 1. 
+
+For $\beta$ we want to assign weakly informative priors to hedge against overfitting. $\beta=0$ implies that on average, there is no association between sales price and lot area. Without much prior information I want to shrink $\beta$ closer towards zero. These distributions represents beliefs before data is observed. So all we really want to do is to assign probability to all plausible values, with less weight on extreme relationships. 
+
+Put another way, weakly regulating priors express my priors as: the parameters of this model have from the sample is overstating the relationship of the "true" conditional mean.
+-->
 
 ### 3)  Prior predictive checks - simulate fake data from the implied generative model
 
