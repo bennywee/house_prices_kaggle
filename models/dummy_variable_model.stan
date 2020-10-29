@@ -27,7 +27,8 @@ model {
     // Priors
     target += normal_lpdf(alpha | 1, alpha_sd);
     target += normal_lpdf(beta | 0, beta_sd);
-    target += normal_lpdf(sigma |0, 1);
+    target += exponential_lpdf(sigma |1);
+    //target += normal_lpdf(sigma |0, 1);
     
     // Likelihood
     if(run_estimation==1){
