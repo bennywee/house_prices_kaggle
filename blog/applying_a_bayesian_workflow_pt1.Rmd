@@ -1,5 +1,5 @@
 ---
-title: "Applying a bayesian workflow (I)"
+title: "Applying Lessons from Statistical Rethinking (I)"
 author: "Benjamin Wee"
 date: "21/10/2020"
 output: 
@@ -46,7 +46,12 @@ My formal education in statistics/econometrics placed less emphasis on workflow 
 This is not a dig at any curriculum -- there are finite resources and a growing list of things to learn and evolving practices. 
 -->
 
-## So why is thinking about workflow important?
+<!--## So why is thinking about workflow important?-->
+## Thinking about workflow
+
+A recurring theme from members of the bayesian community is the importance of workflow. My formal education in econometrics placed more emphasis on tools and derivations for applied predictive or causal inference. "Workflow" or the _structure_ of data analysis and model building was not explicitly covered. At best, components of workflow were explored in some applied research seminars.
+
+Developments around "workflow" are a current topic of research. The most recent paper came out on November 2nd titled "Bayesian Workflow" which has many contributions from active members in the statistics community. This writeup was prepared before I had a chance to read the paper, but I hope it covers some of the principles and recommendations. And if not, like statistical models, I the way I do statistical modelling will iterate and improve. 
 
 A principled workflow supports quality model building. It provides a set of sensible defaults which help evaluate the assumptions of model design and identify errors. That isn't to say there is a gold standard of how all data analysis should be conducted. Rather, workflow guides modelling decisions and helps diagnose problems when iterating on model complexity.
 
@@ -62,6 +67,8 @@ The bolded steps below will be discussed in this post. I have reserved the other
 
 1)  **Exploratory data analysis and data transformation**
 
+<!-- Step 1.5? Do you need a model? Most of my time is spent in 1 and 1.5-->
+
 2)  **Write out full probability model**
 
 3)  **Prior predictive checks - simulate fake data from the implied generative model**
@@ -70,11 +77,13 @@ The bolded steps below will be discussed in this post. I have reserved the other
 
 5)  **Estimate model on real data**
 
-6) Check whether MCMC sampler ran efficiently
+6) Check whether MCMC sampler ran efficiently and model convergence
 
 7) **Posterior predictive check to evaluate model fit**
 
 8) Model selection using cross validation and information criteria
+
+9) _Optional:_ Evaluate model performance on test or out of sample dataset (depends on your problem, is it a predictive task or a causal inference task?)
 
 <!--Note, this a minimal working example of a bayesian workflow and the rationale for its steps. Much more robust and detailed methods can be found in the [Stan case studies](https://mc-stan.org/users/documentation/case-studies), in particular Michael Betancourt's case study on a [Principled Bayesian Workflow](https://betanalpha.github.io/assets/case_studies/principled_bayesian_workflow.html#1_questioning_authority).-->
 
@@ -134,7 +143,7 @@ library(kableExtra)
 head(py$df)
 ```
 
-First we visualise the distribution of the target variable. We immediately see there is a positive skew in the distribution. Taking the natural log of this gives an approximately normal distribution.
+<!--First we visualise the distribution of the target variable. We immediately see there is a positive skew in the distribution. Taking the natural log of this gives an approximately normal distribution.
 
 ```{python eval=FALSE}
 import matplotlib.ticker as ticker
@@ -154,6 +163,7 @@ axes[1].set_xlabel("Log prices")
 <center>
 ![](figures/1_histograms.svg)
 </center>
+-->
 
 A scatter plot shows a positive correlation between `log(SalePrice)` and `log(LotArea)` as expected. All else equal, property prices tend to be higher with larger land sizes. However, the univariate linear model clearly underfits the data and there is almost surely some unobserved confounder variable(s).
 
@@ -199,35 +209,53 @@ I will use the no pooling OLS model to demonstrate rest of the workflow. These m
 
 ### Model specification
 
-The no pooling or dummy variable regression is written out below, where i indexes the property and j indexes each neighbourhood. I've assigned a gaussian likelihood which assumes that the residuals are normally distributed. 
+The no pooling regression is written out below, where i indexes the property and j indexes each neighbourhood. I've assigned a gaussian likelihood which assumes that the residuals are normally distributed. 
 
 $$
 y_i \sim Normal(\mu_i, \sigma) \\
  \\
 \mu_i = \alpha_{j} + \beta * x_i \\
 $$
-Where $y_i$ is `log(SalesPrice)` scaled by it's mean value and $x_i$ is `log(LotArea)` scaled to mean 0 and standard deviation 1. Scaling $y_i$ like this makes the average value of the outcome variable to be mean 1. Since SalePrice is on the log scale, a value of 1.1 for  $y_i$ can be interpreted as 10\% higher relative to the average value. Similarly, 0.7 can be interpreted as 70\% of the average value.
+Where $y_i$ is `log(SalesPrice)` and $x_i$ is `log(LotArea)` scaled to mean 0 and standard deviation 1. $\alpha_j$ is an intercept parameter for the jth neighbourhood in the sample. The slope coefficient can be interpreted as: a one standard deviation increase in `log(LotArea)` is a $\beta$ standard deviation change in `log(SalesPrice)`. 
+
+<!--Where $y_i$ is `log(SalesPrice)` scaled by it's mean value and $x_i$ is `log(LotArea)` scaled to mean 0 and standard deviation 1. Scaling $y_i$ like this makes the average value of the outcome variable to be mean 1. Since SalePrice is on the log scale, a value of 1.1 for  $y_i$ can be interpreted as 10\% higher relative to the average value. Similarly, 0.7 can be interpreted as 70\% of the average value.-->
+
+```{python, eval=FALSE}
+# Center and scale predictor
+df['log_lot_area_z'] = (df['log_lot_area'] - df['log_lot_area'].mean()) / df['log_lot_area'].std()
+
+# Scale target
+df['log_sales_price_std'] = (df['log_sales_price'] - df['log_sales_price'].mean()) /df['log_sales_price']std()
+
+```
 
 $$
-y_i = \frac{log(SalesPrice)_i}{\overline{log(SalesPrice)}}\\
+y_i = \frac{log(SalesPrice)_i - \overline{log(SalesPrice)}}{\sigma_{log(SalesPrice)}} \\
 x_i = \frac{log(LotArea)_i - \overline{log(LotArea)}}{\sigma_{log(LotArea)}}
 $$
 
 Standardising both outcome and predictor variables makes sampling from the posterior distribuion easier when we fit the model. If we had more continuous regressors, we could also compare the parameteres on the same scale. Standardising also plays an important role in setting priors as we'll see below.
 
-<!-- Potential question: Why different scaling? For y, using mean 0 and std 1. Index variable allows us to assign the same prior to all categories-->
+
+<!-- Potential question: Why different scaling? For y, using mean 0 and std 1. Index variable allows us to assign the same prior to all categories. I thought it would be easier to articulate prior choices of the $\alpha$ coefficients if they were in percentages of the overall mean when I first attempted this. I had already stuck with this scaling for all my other models by the time I got to the writeup. In hindsight, it may have been easier to express the priors if I had centered and scaled to mean 0 and standard deviation 1. I'll be curious to hear people's thoughts on whether this scaling would be more intuitive, or perhaps easier to express priors.-->
 
 ### Selecting priors
 
 We need to assign distributions to the parameters for this to be a probability or bayesian model. I have chosen weakly informative priors following the advice of the [stan developers](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations). I do not have domain expertise in this specific dataset to give more informative priors. I do have some understanding of how property prices worked which guided my intital EDA. However, I can still choose sensible priors that at least regularlise model results and are within the plausible outcome space.
 
-We know that the variance parameter over $\sigma$ is defined over positive reals. So our prior should only put probabilistic weight on possible values. In this case I've chosen a Half normal distribution which has thinner tails than other candidate priors such as the exponential or half-cauchy distributions.
+We know that the variance parameter $\sigma$ is defined over positive reals. So our prior should only put probabilistic weight on possible values. In this case I've chosen an exponential(1) prior. Other candidate priors are the half-cauchy distribution or the half-normal which has thinner tails.
 
-For $\beta$ we want to assign weakly informative priors to hedge against overfitting. $\beta=0$ implies that on average, there is no association between sales price and lot area. Without much prior information I want to shrink $\beta$ closer towards zero. So all we really want to do is to assign probability to all plausible values of $\beta$ in this particular model, with less weight on extreme relationships. 
+<!--Half normal distribution which has thinner tails than other candidate priors such as the exponential or half-cauchy distributions.-->
 
-$\alpha_j$ is the intercept for the $j^{th}$ neighbourhood. In a simple linear (pooled) regression between price and lot area, the intercept $\alpha$ (ignoring the neighbourhood means ignoring the j subscript) would be interpreted as the value of of $y$ when $x$ is 0. Since $x$ has a mean of zero, $\alpha$ has the additional interpretation as "the value of $y$ when $x$ is equal to its sample mean". By construction, $\alpha$ must be 1, the sample mean of $y$.
+For $\beta$ we want to assign weakly informative priors to hedge against overfitting. $\beta=0$ implies that on average, there is no association between sales price and lot area. Without much prior information I want to shrink $\beta$ closer towards zero. So all we really want to do is to assign probability to all plausible values of $\beta$ in this particular model, with less weight on extreme relationships. I'll assign $\beta$ a $Normal(0, 1)$ distribution. This assumes that roughly 95\% of the probability is within 2 standard deviations of the mean for a unit incrase in $x_i$.
 
-So in the case of $\alpha_j$ I set a normal prior with a mean of 1 and a standard deviaion of 0.01 for all neighbourhoods, tightly regularising all neighbourhood effects to the sample mean of $y$. Standardising the variables made this much easier.
+<!--Maybe a footnote: I was playing around the idea with putting a strictly positive prior on beta, i.e only a strict positive relationship between lot area and price. But in this case I really only wanted the priors to be regularising without any other information. Also, I feel less inclined to put more informative priors given that I really don't have much other domain understanding of how housing prices work in this side of the world. There is also a lot of confounding in this simple model so a range of possible positive or negative values are likely. -->
+
+$\alpha_j$ is the intercept for the $j^{th}$ neighbourhood. In a simple linear (pooled) regression between price and lot area, the intercept $\alpha$ (ignoring the neighbourhood means ignoring the j subscript) would be interpreted as the value of of $y$ when $x$ is 0. Since $x$ has a mean of zero, $\alpha$ has the additional interpretation as "the value of $y$ when $x$ is equal to its sample mean". By construction, $\alpha$ must be 0, the sample mean of $y$.
+
+So in the case of $\alpha_j$ I set a normal prior with a mean of 0 and a standard deviaion of 1 for all neighbourhoods, regularising neighbourhood effects to be within two standard deviations of $y$. 
+
+<!--This assumes that the average neighbourhood price is between 50\% and 150\% of the overall average property price with 95\% probability. -->
 
 In summary, weakly regulating priors express my belief that the parameters of this model would overfit the sample and that we need to regularise their effects. Standardising the variables made this job much easier and intuitive. 
 
@@ -236,9 +264,9 @@ All together the full model looks like:
 $$
 y_i \sim Normal(\mu_i, \sigma) \\
 \mu_i = \alpha_{j} + \beta * x_i \\
-\alpha_j\sim Normal(1, 0.01)\\
-\beta\sim Normal(0, 0.1) \\
-\sigma\sim Normal_{+}(0,1)
+\alpha_j\sim Normal(0, 1)\\
+\beta\sim Normal(0, 1) \\
+\sigma\sim exp(1)
 $$
 
 
@@ -272,17 +300,281 @@ For $\beta$ we want to assign weakly informative priors to hedge against overfit
 Put another way, weakly regulating priors express my priors as: the parameters of this model have from the sample is overstating the relationship of the "true" conditional mean.
 -->
 
-### 3)  Prior predictive checks - simulate fake data from the implied generative model
+### 3)  Prior predictive checks - simulate fake data from the implied generative model{.tabset .tabset-fade .tabset-pills}
+
+We want to perform prior predictive simulations to understand the implications of our priors and likelihood. This will help us diagnose any problems with our assumptions and modelling decisions. This works by simulating parameters from the joint prior distribution, _without_ evaluating the likelihood (i.e before the model is trained on the data). We can then see what the implied distribution of the outcome variable `y` is relative to the actual outcome. 
+
+I've provided some heavily commented stan code below which shows how to specify the no pooling model and execute it via python.
+
+```{python, eval = FALSE}
+no_pooling_stan_code = '''
+// No pooling model for predicting housing prices
+data {
+    // Fitting the model on training data
+    int<lower=0> N; // Number of rows
+    int<lower=0> neighbourhood[N]; // neighbourhood categorical variable
+    int<lower=0> N_neighbourhood; // number of neighbourhood categories
+    vector[N] log_sales_price; // log sales price
+    vector[N] log_lot_area; // log lot area
+
+    // Adjust scale parameters in python
+    real alpha_sd;
+    real beta_sd;
+    
+    // Set to zero for prior predictive checks, set to one to evaluate likelihood
+    int<lower = 0, upper = 1> run_estimation;
+}
+parameters {
+    vector[N_neighbourhood] alpha; // Vector of alpha coefficients for each neighbourhood
+    real beta;
+    real<lower=0> sigma;
+}
+model {
+    // Priors
+    target += normal_lpdf(alpha | 1, alpha_sd);
+    target += normal_lpdf(beta | 0, beta_sd);
+    target += exponential_lpdf(sigma |1);
+    
+    // Likelihood
+    if(run_estimation==1){
+        target += normal_lpdf(log_sales_price | alpha[neighbourhood] + beta * log_lot_area, sigma);
+
+    }
+}
+'''
+
+# Dictionary contains all data inputs
+npm_data_check = dict(N = len(df),
+                      log_sales_price = df['log_sales_price_std'],
+                      log_lot_area = df['log_lot_area_z'],
+                      neighbourhood = df['neighbourhood'],
+                      N_neighbourhood = len(df['Neighborhood'].unique()),
+                      alpha_sd = 0.01, 
+                      beta_sd = 0.1, 
+                      run_estimation = 0)
+
+# Estimate model by drawing samples from joint prior distribution
+fit_npm_check = no_pooling_stan_code.sampling(data=npm_data_check)
+
+# Extract sampled values into a pandas dataframe
+npm_df_check = fit_npm_check.to_dataframe()
+```
+The codes includes all the inputs necessary to estimate the model on the data. Setting `run_estimation = 0` and including the conditional statement in the stan code means stan will only simulate values from the joint prior distribution since the likelihood is not evaluated (thanks to Jim for this handy [tip](https://khakieconomics.github.io/2017/04/30/An-easy-way-to-simulate-fake-data-in-stan.html)). 
+
+> For the prior predictive checks, we recommend not cleaving too closely to the observed data and instead aiming for a prior data generating process that can produce plausible data sets, not necessarily ones that are indistinguishable from observed data. - [Visualisation Bayesian Workflow - Gabry, Simpson, Vehtari, Betancourt, Gelman (2019)](https://arxiv.org/pdf/1709.01449.pdf)
+
+The implied predictions of our priors are visualised below. It shows the implied linear association when `x` increases by one standard deviation with `y`. Since the priors for the neighbourhoods are the same, I've arbitrairily chosen the 4th neighbourhood indexed as the $\alpha$. Remember that ~95\% of gaussian mass exists within two standard deviations of the mean. So we should keep this in mind when choosing weakly informative priors to ensure that we create bounds to values which are possible while allowing relationships which are implausible. I've included an example of what happens if we choose extremely wide (uninformative) priors and its implications on the data generating process. 
+
+<!--Note, We should avoid evaluating our priors using the sample data as this will bias our results. -->
+
+#### Prior Predictive Check
+```{python, eval=FALSE}
+_, ax = plt.subplots(figsize = (13, 8))
+
+x = np.linspace(-3, 3, 200)
+
+for alpha, beta in zip(npm_df_check_wide["alpha[4]"][:100], npm_df_check_wide["beta"][:100]):
+    y = alpha + beta * x
+    ax.plot(x, y, c="k", alpha=0.4)
+
+ax.set_xlabel("x (z-scores)")
+ax.set_ylabel("Fitted y (z-scores)")
+ax.set_title("Prior predictive checks -- Uninformative (flat) priors")
+plt.savefig('figures/5_prior_predictive_check_wide.svg', dpi=300);
+```
+
+<center>
+![](figures/4_prior_predictive_check.svg)
+</center>
+#### Uninformative prior
+
+I set the scale parameters for $\alpha$ and $\beta$ to be 10. The graph below shows that these priors are quite uninformative and diffuse. The implied predictions of the mean are much wider are well beyond the the minimum and maximum values in the real data. This suggests that the model is giving too much probabilistic weight to highly implausible datasets. 
+
+```{python, eval=FALSE}
+npm_data_check_wide = dict(N = len(df),
+                      log_sales_price = df['log_sales_price_std'],
+                      log_lot_area = df['log_lot_area_z'],
+                      neighbourhood = df['neighbourhood'],
+                      N_neighbourhood = len(df['Neighborhood'].unique()),
+                      alpha_sd = 10, 
+                      beta_sd = 10, 
+                      run_estimation = 0)
+
+fit_npm_check_wide = no_pooling_model.sampling(data=npm_data_check_wide)
+npm_df_check_wide = fit_npm_check_wide.to_dataframe()
+
+_, ax = plt.subplots(figsize = (13, 8))
+
+x = np.linspace(-3, 3, 200)
+
+for alpha, beta in zip(npm_df_check_wide["alpha[4]"][:100], npm_df_check_wide["beta"][:100]):
+    y = alpha + beta * x
+    ax.plot(x, y, c="k", alpha=0.4)
+
+ax.set_xlabel("x (z-scores)")
+ax.set_ylabel("Fitted y (z-scores)")
+ax.set_title("Prior predictive checks -- Uninformative (flat) priors")
+plt.savefig('figures/5_prior_predictive_check_wide.svg', dpi=300);
+```
+
+<center>
+![](figures/5_prior_predictive_check_wide.svg)
+</center>
+
+### {-}
+
+<!--Doing so allows us to see the consequences of our assumptions and modelling decisions.-->
 
 ### 4)  Fit model on fake data
 
+Take one of the simulated blue lines (fake data) and the parameters sampled from the prior which correspond to that line (let's say the 50th simulation) and estimate the model. Let's see if our model fitted on fake data can capture the "true" parameters (dotted red lines) which generated the distribution. If your model cannot capture the _known_ parameters which generated fake data, there is no way it will be estimating the correct parameters on real data.
+
+```{python, eval=FALSE}
+# Pick random simulation, let's say 50
+random_draw = 50
+
+# Extract the simulated (fake) data implied by the parameters in sample 10
+y_sim = npm_df_check.filter(regex = 'y_hat').iloc[random_draw, :]
+
+# Extract the parameteres corresponding to sample 10
+true_parameters = npm_df_check.filter(regex = 'alpha|beta|sigma').iloc[random_draw, :]
+
+# Fit the model on the fake data
+_npm_data_check = dict(N = len(df),
+              log_sales_price = y_sim, # this is now fitting on the extracted fake data in sample 10
+              log_lot_area = df['log_lot_area_z'],
+              neighbourhood = df['neighbourhood'],
+              N_neighbourhood = len(df['Neighborhood'].unique()),
+              alpha_sd = 0.01, 
+              beta_sd = 0.1, 
+              run_estimation = 1)
+
+_fit_npm_check = no_pooling_model.sampling(data=_npm_data_check)
+_npm_df_check = _fit_npm_check.to_dataframe()
+fake_fit = _npm_df_check.filter(regex = 'alpha|beta|sigma')
+parameter_df = pd.melt(fake_fit)
+
+# Plot will give distributions of all parameteres to see if it can capture the known parameters
+fig, axes = plt.subplots(nrows=max(2, math.ceil(fake_fit.shape[1] / 6)), ncols=6, sharex=False, sharey = True, figsize=(21,13))
+fig.suptitle('Model Checking - red lines are "true" parameters', size = 30)
+axes_list = [item for sublist in axes for item in sublist] 
+parameters = parameter_df[['variable']].drop_duplicates().set_index('variable').index
+grouped = parameter_df.groupby("variable")
+
+for parameter in parameters:
+    selection = grouped.get_group(parameter)
+    ax = axes_list.pop(0)
+    selection.plot.kde(label=parameter, ax=ax, legend=False)
+    ax.set_title(parameter)
+    ax.grid(linewidth=0.25)
+    ax.axvline(x=true_parameters[parameter], color='red', linestyle='--', alpha = 0.5)
+
+# Now use the matplotlib .remove() method to delete anything we didn't use
+for ax in axes_list:
+    ax.remove()
+
+plt.tight_layout()
+```
+
+<center>
+![](figures/6_fit_fake_data.svg)
+</center>
+
+The model sufficiently captured the known parameters. The next post will go through a more interesting example where this fails and requires us to rethink how we specified our models.
+
 ### 5)  Estimate model on real data
 
-### 6) Check whether MCMC sampler ran efficiently
+Set `run_estimation=1` and run the code to fit the model. Stan will sample the joint posterior distribution using the default Markov chain Monte Carlo (MCMC) algorithm, the [No-U-Turn sampler (NUTs)](https://mc-stan.org/docs/2_18/reference-manual/hmc-algorithm-parameters.html).
 
-### 7) Posterior predictive check to evaluate model fit
+```{python, eval=FALSE}
+# Dictionary with data inputs - set run_estimation=1
+npm_data = dict(N = len(df),
+              log_sales_price = df['log_sales_price_std'],
+              log_lot_area = df['log_lot_area_z'],
+              neighbourhood = df['neighbourhood'],
+              N_neighbourhood = len(df['Neighborhood'].unique()),
+              alpha_sd = 1, 
+              beta_sd = 1, 
+              run_estimation = 1)
 
-### 8) Model selection using cross validation and information criteria
+# Fit model by sampling from posterior distribution
+fit_npm = no_pooling_model.sampling(data=npm_data)
+
+# For generating viusalisations using the arviz package
+npm_az = az.from_pystan(
+    posterior=fit_npm,
+    posterior_predictive="y_hat",
+    observed_data="log_sales_price",
+    log_likelihood='log_lik',
+)
+
+# Extract samples into dataframe
+fit_npm_df = fit_npm.to_dataframe()
+```
+### 6) Check whether MCMC sampler and model fit
+
+Stan won't have trouble sampling from such a simple model, so I won't go through chain diagnostics. However, we can see the posterior distributions of all the parameters by looking at the traceplot:
+```{python,eval=FALSE}
+# Inspect model fit
+az.plot_trace(fit_npm, 
+              var_names=["alpha", "beta", "sigma"], 
+              compact = True, 
+              chain_prop = 'color')
+```
+
+<center>
+![](figures/7_trace_plot.svg)
+</center>
+
+### 7) Posterior predictive check to evaluate model performance
+
+Now we want to check how well our model performed. We can perform posterior predictive checks to see if simulated distributions from the fitted model can successfully predict the observed training data. If the model performs well, it should be able to retrodict the density of the data used to train the model. The blue lines are the predictions drawn from the joint posterior distribution compared with the observed density of the $y$ target variable
+
+
+```{python, eval=FALSE}
+az.plot_ppc(data = npm_az, 
+            kind = 'kde', 
+            data_pairs = {'log_sales_price' : 'y_hat'},
+            legend = True,
+            color='cyan',
+            mean = False,
+            figsize=(8, 5),
+            alpha = 0.5,
+            num_pp_samples=200)
+```
+
+<center>
+![](figures/8_posterior_predictive_check.svg)
+</center>
+
+We can transform this to get the posterior predictive checks on the natural scale (rescale $y$ and exponentiate `log(SalesPrice)` to get back `SalesPrice`:
+
+```{python,eval=FALSE}
+fig, axes = plt.subplots(1,1, figsize = (13, 8))
+np.exp(fit_npm_df.filter(regex = 'y_hat')*df['log_sales_price'].mean()) \\
+                                                               .T\\
+                                                               .iloc[:, :300]\\
+                                                               .plot.kde(legend = False, 
+                                                                         title = 'Posterior predcitve checks', 
+                                                                         xlim = (30000,500000),
+                                                                         alpha = 0.1,
+                                                                         ax = axes);
+df['SalePrice'].plot.kde(legend = False, 
+                             xlim = (30000,500000),
+                             alpha = 1,
+                             ax = axes);
+```
+<center>
+![](figures/9_posterior_predictive_check_outcomescale.svg)
+</center>
+
+Not too bad for a very simple model. We can definitely iterate and improve on this.
+
+### Conclusion
+
+The last things we should do is compare the fits of multiple models and evaluate their performance using cross validation. Since we only fitted a single model, I have reserved this for the next post which applies the complete workflow on more complex multilevel/heirarchical models. Since this is also a predictive task, we can also evaluate model performance on out of sample data (in this kaggle competition, we would evaluate the log RMSE of the out of sample dataset). 
+
+Note that this is not an exhaustive review of all the diagnostics and visualiastions that can be performed in a workflow. There are multiple ways of evaluating model fit and performing prior/posterior predictive checks that could validate or invalidate the model. Hopefully you found this useful and I welcome any feedback!
 
 ## R
 
