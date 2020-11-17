@@ -1,0 +1,364 @@
+---
+title: "Applying a bayesian workflow: lessons from Statistical Rethinking (I)"
+output: html_notebook
+---
+
+### 1) Exploratory data analysis and data transformation
+
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(rstan)
+library(bayesplot)
+
+# Detect cores for parallel sampling
+options(mc.cores = parallel::detectCores())
+
+df = read_csv('../data/raw/train.csv') %>% select('SalePrice', 'LotArea', 'Neighborhood')
+
+head(df)
+```
+
+```{r}
+# Perform log transfomations
+df <- df %>% mutate(log_sales_price = log(SalePrice),
+                    log_lot_area = log(LotArea),
+                    neighbourhood = as.integer(as.factor(df$Neighborhood)))
+```
+
+```{r}
+ggplot(df, aes(x = log_lot_area, y = log_sales_price)) +
+  geom_point(colour = 'blue') +
+  geom_smooth(method = lm, se = FALSE, formula = 'y ~ x') + 
+  ggsave('figures/2r_pooling_scatter.svg', dpi = 72, width=10, height = 8, units = 'in')
+```
+
+
+```{r}
+ggplot(df, aes(x = log_lot_area, y = log_sales_price)) +
+  geom_point(colour = 'blue') +
+  geom_smooth(method = lm, se = FALSE, formula = 'y ~ x', fullrange = TRUE) +
+  facet_wrap(~Neighborhood) +
+  theme(strip.background = element_blank()) + 
+  ggsave('figures/3r_facet_scatter.svg', dpi = 72, height = 8, width = 7)
+```
+
+
+```{r}
+df = df %>% mutate(log_lot_area_z = scale(log_lot_area),
+                    log_sales_price_z = scale(log_sales_price))
+```
+
+```{r}
+df %>% select(log_sales_price_z) %>% 
+  apply(., MARGIN  = 2, FUN = function(x) exp((x * sd(df$log_sales_price)) + mean(df$log_sales_price))) %>% 
+  as.data.frame() %>% 
+  cbind(., df$SalePrice) %>% 
+  mutate(delta = log_sales_price_z - `df$SalePrice`) %>% 
+  round(., digits = 1) %>% 
+  summarise(delta = sum(delta))
+
+```
+
+
+$$
+y_i \sim Normal(\mu_i, \sigma) \\
+\mu_i = \alpha_{j} + \beta * x_i \\
+\alpha_j\sim Normal(0, 1)\\
+\beta\sim Normal(0, 1) \\
+\sigma\sim exp(1)
+$$
+
+
+
+
+### 3)  Prior predictive checks - simulate data from the implied generative model
+
+```{r include=FALSE}
+no_pooling_stan_code = "
+// No pooling model for predicting housing prices
+data {
+    // Fitting the model on training data
+    int<lower=0> N; // Number of rows
+    int<lower=0> neighbourhood[N]; // neighbourhood categorical variable
+    int<lower=0> N_neighbourhood; // number of neighbourhood categories
+    vector[N] log_sales_price; // log sales price
+    vector[N] log_lot_area; // log lot area
+
+    // Adjust scale parameters in python
+    real alpha_sd;
+    real beta_sd;
+    
+    // Set to zero for prior predictive checks, set to one to evaluate likelihood
+    int<lower = 0, upper = 1> run_estimation;
+}
+parameters {
+    vector[N_neighbourhood] alpha; // Vector of alpha coefficients for each neighbourhood
+    real beta;
+    real<lower=0> sigma;
+}
+model {
+    // Priors
+    target += normal_lpdf(alpha | 0, alpha_sd);
+    target += normal_lpdf(beta | 0, beta_sd);
+    target += exponential_lpdf(sigma |1);
+    //target += normal_lpdf(sigma |0, 1);
+    
+    // Likelihood
+    if(run_estimation==1){
+        target += normal_lpdf(log_sales_price | alpha[neighbourhood] + beta * log_lot_area, sigma);
+
+    }
+}
+generated quantities {
+    // Uses fitted model to generate values of interest without re running the sampler
+    vector[N] log_lik; // Log likelihood
+    vector[N] y_hat; // Predictions using training data
+    {
+    for(n in 1:N){
+          log_lik[n] = normal_lpdf(log_sales_price | alpha[neighbourhood[n]] + beta * log_lot_area[n], sigma);
+          y_hat[n] = normal_rng(alpha[neighbourhood[n]] + beta * log_lot_area[n], sigma);      
+        }
+    }
+}
+"
+
+# List contains all data inputs
+npm_data_check = list(N = nrow(df),
+                      log_sales_price = as.vector(df$log_sales_price_z),
+                      log_lot_area = as.vector(df$log_lot_area_z),
+                      neighbourhood = as.vector(df$neighbourhood),
+                      N_neighbourhood = max(df$neighbourhood),
+                      alpha_sd = 1, 
+                      beta_sd = 1, 
+                      run_estimation = 0)
+
+# Draw samples from joint prior distribution
+fit_npm_check = stan(model_code = no_pooling_stan_code, data = npm_data_check, chains = 4, seed = 12345)
+
+# Extract samples into a pandas dataframe
+npm_df_check = as.data.frame(fit_npm_check)
+```
+
+```{r include=FALSE}
+npm_data_check_wide = list(N = nrow(df),
+                      log_sales_price = as.vector(df$log_sales_price_z),
+                      log_lot_area = as.vector(df$log_lot_area_z),
+                      neighbourhood = as.vector(df$neighbourhood),
+                      N_neighbourhood = max(df$neighbourhood),
+                      alpha_sd = 10, 
+                      beta_sd = 10, 
+                      run_estimation = 0)
+
+fit_npm_check_wide = stan(model_code = no_pooling_stan_code, data=npm_data_check_wide, chains = 4, seed = 12345)
+npm_df_check_wide = as.data.frame(fit_npm_check_wide)
+```
+
+```{r}
+# Create length of std x variables
+x <- seq(from = -3, to = 3, length.out = 200)
+
+# Create empty dataframe and fill it with parameters
+df_wide <- as.data.frame(matrix(ncol=100, nrow=200))
+for (i in 1:100) {
+  alpha <- npm_df_check_wide$`alpha[4]`[i]
+  beta <- npm_df_check_wide$beta[i]
+  df_wide[, i] <- alpha + beta * x
+  
+}
+
+# Tidy up filled dataframe
+df_wide <- df_wide %>% mutate(x = x) %>% pivot_longer(starts_with("V"))
+
+# Plot
+ggplot(df_wide, aes(x = x, y = value)) +
+  geom_line(aes(group = name), size = 0.2) +
+  scale_x_continuous(breaks = seq(-3, 3, 1)) +
+  labs(title = 'Prior predictive checks -- Uninformative (flat) priors',
+             x = 'x (z-scores)',
+             y = 'Fitted y (z_scores)') + 
+  ggsave('figures/5r_prior_predictive_check_wide.svg', dpi = 72, height = 4, width = 7)
+
+```
+
+
+
+```{r}
+# Create length of std x variables
+x <- seq(from = -3, to = 3, length.out = 200)
+
+# Create empty dataframe and fill it with parameters
+df_regularising <- as.data.frame(matrix(ncol=100, nrow=200))
+for (i in 1:100) {
+  alpha <- npm_df_check$`alpha[4]`[i]
+  beta <- npm_df_check$beta[i]
+  df_regularising[, i] <- alpha + beta * x
+  
+}
+
+# Tidy up filled dataframe
+df_regularising <- df_regularising %>% mutate(x = x) %>% pivot_longer(starts_with("V"))
+
+# Plot
+ggplot(df_regularising, aes(x = x, y = value)) +
+  geom_line(aes(group = name), size = 0.2) +
+  scale_x_continuous(breaks = seq(-3, 3, 1)) +
+  labs(title = 'Prior predictive checks -- Weakly regularizing priors',
+             x = 'x (z-scores)',
+             y = 'Fitted y (z_scores)') + 
+  ggsave('figures/4r_prior_predictive_check.svg', dpi = 72, height = 4, width = 7)
+```
+
+
+
+### 4)  Fit model on fake data
+
+```{r include=FALSE}
+# Pick random simulation, let's say 50
+random_draw <- 50
+
+# Extract the simulated (fake) data implied by the parameters in sample 50
+y_sim <-  npm_df_check[random_draw, ] %>% select(contains('y_hat')) %>% t()
+
+# Extract the parameteres corresponding to sample 50
+true_parameters = npm_df_check[random_draw,] %>% select(contains(c('alpha','beta','sigma')))
+
+# Fit the model on the fake data
+npm_data_check_ = list(N = nrow(df),
+                      log_sales_price = as.vector(y_sim), # target is now extracted fake data in sample 50
+                      log_lot_area = as.vector(df$log_lot_area_z),
+                      neighbourhood = as.vector(df$neighbourhood),
+                      N_neighbourhood = max(df$neighbourhood),
+                      alpha_sd = 1, 
+                      beta_sd = 1, 
+                      run_estimation = 1)
+
+fit_npm_check_ = stan(model_code = no_pooling_stan_code, data=npm_data_check_, chains = 4, seed = 12345)
+npm_df_check_ = as.data.frame(fit_npm_check_)
+
+fake_fit = npm_df_check_ %>% select(contains(c('alpha', 'beta', 'sigma')))
+parameter_df = fake_fit %>% pivot_longer(everything()) %>% rename(parameters = name)
+parameter_df$parameters <- factor(parameter_df$parameters, levels = (parameter_df$parameters %>% unique()))
+
+ggplot(parameter_df, aes(value)) + 
+  geom_density(colour = 'blue') + 
+  facet_wrap(~parameters, scales = 'free') + 
+  geom_vline(data = (true_parameters %>% pivot_longer(everything()) %>% rename(parameters = name)), aes(xintercept = value), colour = 'red') + 
+  labs(title = 'Model Checking - red lines are "true" parameters',
+       x = '') + 
+  theme(strip.background = element_blank()) + 
+  ggsave('figures/6r_fit_fake_data.svg', dpi = 72, height = 6, width = 9)
+```
+
+### 5)  Estimate model on real data
+
+Set `run_estimation=1` and run the code to fit the model. Stan will sample the joint posterior distribution using the default Markov chain Monte Carlo (MCMC) algorithm, the [No-U-Turn sampler (NUTs)](https://mc-stan.org/docs/2_18/reference-manual/hmc-algorithm-parameters.html).
+
+```{r include=FALSE}
+# Dictionary with data inputs - set run_estimation=1
+npm_data = list(N = nrow(df),
+                      log_sales_price = as.vector(df$log_sales_price_z),
+                      log_lot_area = as.vector(df$log_lot_area_z),
+                      neighbourhood = as.vector(df$neighbourhood),
+                      N_neighbourhood = max(df$neighbourhood),
+                      alpha_sd = 1, 
+                      beta_sd = 1, 
+                      run_estimation = 1)
+
+# Fit model by sampling from posterior distribution
+fit_npm = stan(model_code = no_pooling_stan_code, data = npm_data, chains = 4, seed = 12345)
+
+# Extract samples into dataframe
+fit_npm_df = as.data.frame(fit_npm)
+```
+
+### 6) Check whether MCMC sampler and model fit
+Stan won't have trouble sampling from such a simple model, so I won't go through chain diagnostics. However, we can see the posterior distributions of all the parameters by looking at the traceplot. I've included number of effective samples and Rhat diagnostics for completeness.
+
+```{r}
+stan_plot(fit_npm, 
+          show_density = FALSE, 
+          unconstrain = TRUE, 
+          pars = c('alpha', 'beta', 'sigma')) + 
+  labs(title = 'Posterior distributions of fitted parameters') +
+  ggsave('figures/7r_posterior.svg', dpi = 72, height = 6, width = 9)
+```
+<center>
+![](figures/7r_posterior.svg)
+</center>
+
+```{r echo=FALSE}
+# Inspect model fit
+color_scheme_set("mix-blue-red")
+
+trace <- mcmc_combo(
+ as.array(fit_npm),
+ combo = c("dens_overlay", "trace"),
+ pars = c('alpha[1]', 'beta', 'sigma'),
+ gg_theme = legend_none()) 
+
+# Returns gtable object, not ggplot object
+ggsave('figures/7r_traceplot.svg', arrangeGrob(trace), dpi = 72, height = 6, width = 9) 
+```
+<center>
+![](figures/7r_traceplot.svg)
+</center>
+
+```{r}
+print(fit_npm, pars = c('alpha', 'beta', 'sigma'), 
+                         probs=c(0.025, 0.50, 0.975), 
+                         digits_summary=3)
+```
+
+
+
+
+### 7) Posterior predictive check to evaluate model performance
+How well did the model perform? We can perform posterior predictive checks to see if sampled distributions from the fitted model can approximate the density of `SalesPrice` in the training data. If the model performs well, it should be able to retrodict the density of the data used to train the model. The blue lines are the predictions drawn from the joint posterior distribution compared with the observed density of the target $y$ variable.
+
+```{r eval=FALSE}
+color_scheme_set(scheme = "blue")
+yrep <- extract(fit_npm)[["y_hat"]]
+samples <- sample(nrow(yrep), 300)
+ppc_dens_overlay(as.vector(df$log_sales_price_z), yrep[samples, ]) + 
+  ggsave('figures/8r_posterior_predictive_check.png', dpi = 300, height = 6, width = 9)  
+```
+
+<center>
+![](figures/8r_posterior_predictive_check.svg)
+</center>
+
+
+Reversing the data transformations gives back the posterior predictive checks on the natural scale (rescale $y$ and exponentiate `log(SalesPrice)` to get back `SalesPrice`:
+```{r}
+# Take 100 samples of posterior predictive checks and revert back to natural scale
+ppc <- yrep[samples, ] %>% 
+  t() %>% 
+  apply(., MARGIN  = 2, FUN = function(x) exp((x * sd(df$log_sales_price)) + mean(df$log_sales_price))) %>% 
+  as.data.frame() %>%
+  pivot_longer(everything())
+
+# Plot densities
+ggplot(ppc, aes(value)) + 
+  geom_density(aes(group = name), colour = "lightblue") + 
+  geom_density(data = (df %>% select(SalePrice) %>% rename(value = SalePrice)), colour = 'black') +
+  theme(legend.position="none", axis.text.y=element_blank()) +
+  labs(title = 'Posterior predictive checks - Black: observed SalePrice\nLight Blue: Posterior Samples') +
+  ggsave('figures/9r_posterior_predictive_check_outcomescale.png', dpi = 300, height = 6, width = 9) 
+```
+
+<center>
+![](figures/9r_posterior_predictive_check_outcomescale.svg)
+</center>
+
+Not bad for a simple model. There is definitely room for iteration and improvement.
+
+### Conclusion
+
+The last things we should do is compare the fits of multiple models and evaluate their performance using cross validation. Since we only fitted a single model, I have reserved this for the next post which applies the complete workflow on more complex multilevel/hierarchical models. Model performance can also be evaluated on out of sample test data as well since this is a predictive task (this kaggle competition computes the log RMSE of the out of sample dataset).
+
+This is not an exhaustive review of all the diagnostics and visualiastions that can be performed in a workflow. There are many ways of evaluating model fit and diagnostics that could validate or invalidate the model. I hope this was a useful example of building a simple bayesian model. Please comment below if you have any thoughts or feedback!
+
+```{r}
+sessionInfo()
+```
