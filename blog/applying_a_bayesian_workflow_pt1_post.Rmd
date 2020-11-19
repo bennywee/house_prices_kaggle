@@ -17,13 +17,13 @@ output:
 
 [Return home](https://bennywee.github.io/)
 
-I spent the last few years studying Bayesian statistics in my spare time. Most recently, I completed Richard McElreath's [Statistical Rethinking](https://xcelab.net/rm/statistical-rethinking/) - including his 2017 lecture series and problem sets. It is rightfully one of the most popular entry level texts in bayesian statistics. I could not recommended it more highly. 
+I spent the last few years studying Bayesian statistics in my spare time. Most recently, I completed Richard McElreath's [Statistical Rethinking](https://xcelab.net/rm/statistical-rethinking/) - including his 2017 lecture series and problem sets. It is rightfully one of the most popular entry level texts in bayesian statistics. I could not recommend it more highly. 
 
 While I've gained a lot from doing problem sets and discussing course material with other people, nothing beats testing your knowledge and challenging imposter syndrome by attempting a modelling problem on your own.
 
-So I decided to apply what I've learned so far on the kaggle dataset: [House Prices: Advanced Regression Techniques](https://www.kaggle.com/c/house-prices-advanced-regression-techniques/overview). The goal is to practise what I've learned in my self study journey and hopefully demonstrate some of the best practices advocated by those in the applied statistics community. This writeup was completed in R and Python (you'll get to choose below) and Stan* for modelling. 
+So I decided to apply what I've learned so far on the Kaggle dataset: [House Prices: Advanced Regression Techniques](https://www.kaggle.com/c/house-prices-advanced-regression-techniques/overview). The goal is to practise what I've learned in my self study journey and hopefully demonstrate some of the best practices advocated by those in the applied statistics community. This writeup was completed in R and Python (you'll get to choose below) and Stan* for modelling. 
 
-*[Stan](https://mc-stan.org/)  is a probabilistic programming language that can flexibly estimate a wide range of probabilistic and bayesian models. It uses state of the art algorithms such as hamiltonian monte carlo (HMC) which allows efficient sampling of models in high dimensions without the need for conjugate priors. Stan is used across academia and industry and notably in facebook's open source forecasting tool, [prophet](https://facebook.github.io/prophet/). 
+*[Stan](https://mc-stan.org/)  is a probabilistic programming language that can flexibly estimate a wide range of probabilistic and bayesian models. It uses state of the art algorithms such as Hamiltonian Monte Carlo (HMC) which allows efficient sampling of models in high dimensions without the need for conjugate priors. Stan is used across academia and industry and notably in facebook's open source forecasting tool, [prophet](https://facebook.github.io/prophet/). 
 
 ## Thinking about workflow
 
@@ -35,7 +35,7 @@ Developments around workflow are a current topic of research. The most recent pa
 
 > "Practical Bayesian data analysis, like all data analysis, is an iterative process of model building, inference, model checking and evaluation, and model expansion" - [Visualisation Bayesian Workflow - Gabry, Simpson, Vehtari, Betancourt, Gelman (2019)](https://arxiv.org/pdf/1709.01449.pdf)
 
-The proposed workflow I adopted was originally inspired from [blog posts](https://khakieconomics.github.io/2016/08/29/What-is-a-modern-statistical-workflow.html) by Jim Savage a few years ago and more recently, Monica Alexander's [example](https://www.monicaalexander.com/posts/2020-28-02-bayes_viz/) of visualiastion in an end-to-end bayesian analysis. I've included a full list of resources which helped me at the end of this post. The steps in bold will be discussed below while an application using the full workflow will be in an upcoming writeup. 
+The proposed workflow I adopted was originally inspired from [blog posts](https://khakieconomics.github.io/2016/08/29/What-is-a-modern-statistical-workflow.html) by Jim Savage a few years ago and more recently, Monica Alexander's [example](https://www.monicaalexander.com/posts/2020-28-02-bayes_viz/) of visualisation in an end-to-end bayesian analysis. I've included a full list of resources which helped me at the end of this post. The steps in bold will be discussed below while an application using the full workflow will be in an upcoming writeup. 
 
 ### **Steps in proposed workflow**
 
@@ -114,7 +114,7 @@ library(kableExtra)
 head(py$df)
 ```
 
-A scatter plot shows a positive correlation between `log(SalePrice)` and `log(LotArea)`. Fitting OLS on the logorithms of both variables assumes a linear relationship on the multiplicative scale. All else equal, property prices tend to be higher with larger lot sizes. However, this univariate linear model clearly underfits the data and there are almost surely unobserved confounding variables.
+A scatter plot shows a positive correlation between `log(SalePrice)` and `log(LotArea)`. Fitting OLS on the logarithms of both variables assumes a linear relationship on the multiplicative scale. All else equal, property prices tend to be higher with larger lot sizes. However, this univariate linear model clearly underfits the data and there are almost surely unobserved confounding variables.
 
 ```{python eval=FALSE}
 sns.lmplot(x='log_lot_area',y='log_sales_price',data=df,fit_reg=True, ci = False)
@@ -145,7 +145,7 @@ facet_scatter.set(ylim=(5, 15))
 ![](figures/3_facet_scatter.svg)
 </center>
 
-We can see variation in the slopes and intercepts as well as imbalanced sampling between neighbourhood clusters. This and other unobserved confounders probably contributed to some of the weak/negative gradients. The small sample sizes in some neighbourhood will be prone to overfitting and will give noisy estimates which will require regularisation.  
+We can see variation in the slopes and intercepts as well as imbalanced sampling between neighbourhood clusters. This and other unobserved confounders probably contributed to some of the weak/negative gradients. The small sample sizes in some neighbourhoods will be prone to overfitting and will give noisy estimates which will require regularisation.  
 
 ### 2) Write out full probability model
 
@@ -155,7 +155,7 @@ We can see variation in the slopes and intercepts as well as imbalanced sampling
 2) No pooling OLS (conceptually the same as a dummy variable regression - assumes independence between all neighbourhoods)
 3) Saturated regression (adds interactive effects between `log(LotArea)_i` and `neighbourhood` to no pooling OLS)
 
-I will use no pooling OLS to demonstrate rest of the workflow. There is definitely room for improving these models. In fact, this problem is a good candidate for multilevel models. They allow for information to be borrowed between neighbourhood clusters through partial pooling and removes the assumption of independence. This will help regularise the effects of small and imbalanced sample sizes across `neighbourhood`. I will apply the full workflow using multilevel models in the next post.
+I will use no pooling OLS to demonstrate the rest of the workflow. There is definitely room for improving these models. In fact, this problem is a good candidate for multilevel models. They allow for information to be borrowed between neighbourhood clusters through partial pooling and removes the assumption of independence. This will help regularise the effects of small and imbalanced sample sizes across `neighbourhood`. I will apply the full workflow using multilevel models in the next post.
 
 ### Model specification
 
@@ -190,19 +190,19 @@ y_i = \frac{log(SalesPrice)_i - \overline{log(SalesPrice)}}{\sigma_{log(SalesPri
 x_i = \frac{log(LotArea)_i - \overline{log(LotArea)}}{\sigma_{log(LotArea)}}
 $$
 
-Standardising both outcome and predictor variables makes sampling from the posterior distribuion easier when we fit the model. If we had more continuous regressors, we could also compare the parameters on the same scale. Standardising also plays an important role in setting priors as we'll see below.
+Standardising both outcome and predictor variables makes sampling from the posterior distribution easier when we fit the model. If we had more continuous regressors, we could also compare the parameters on the same scale. Standardising also plays an important role in setting priors as we'll see below.
 
 ### Selecting priors
 
-Probability distributions need to be assigned to the parameters for this to be a bayesian model. Setting priors is an opportunity to encode domain knowledge or results from related studies into the model. Unfortunately, I do not have much domain expertise or information about the context of this dataset to give very informative priors. So I have chosen to use weakly informative priors following the advice of the [stan developers](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations). This will help me regularlise model predictions within the plausible outcome space.
+Probability distributions need to be assigned to the parameters for this to be a bayesian model. Setting priors is an opportunity to encode domain knowledge or results from related studies into the model. Unfortunately, I do not have much domain expertise or information about the context of this dataset to give very informative priors. So I have chosen to use weakly informative priors following the advice of the [Stan developers](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations). This will help me regularise model predictions within the plausible outcome space.
 
 For $\beta$ I'll assign a $Normal(0, 1)$ which puts ~95\% of the probability between two standard deviations for a unit increase in $x$. We want to hedge against overfitting by shrinking the coefficient towards zero. This is achieved by putting probability mass on all plausible values of $\beta$ with less weight on extreme relationships.
 
-$\alpha_j$ is the intercept for the $j^{th}$ neighbourhood. In a pooled OLS regression between price and lot area, the intercept $\alpha$ (ignoring the neighbourhood means ignoring the j subscript) would be interpreted as the value of of $y$ when $x$ is 0. Since $x$ has a mean of zero, $\alpha$ has the additional interpretation as the value of $y$ when $x$ is equal to its sample mean. By construction, $\alpha$ must be 0, the sample mean of $y$.
+$\alpha_j$ is the intercept for the $j^{th}$ neighbourhood. In a pooled OLS regression between price and lot area, the intercept $\alpha$ (ignoring the neighbourhood means ignoring the j subscript) would be interpreted as the value of $y$ when $x$ is 0. Since $x$ has a mean of zero, $\alpha$ has the additional interpretation as the value of $y$ when $x$ is equal to its sample mean. By construction, $\alpha$ must be 0, the sample mean of $y$.
 
-So in the case of $\alpha_j$ I set a normal prior with a mean of 0 and a standard deviaion of 1 for all neighbourhoods, regularising neighbourhood effects within two standard deviations of the grand mean of $y$. 
+So in the case of $\alpha_j$ I set a normal prior with a mean of 0 and a standard deviation of 1 for all neighbourhoods, regularising neighbourhood effects within two standard deviations of the grand mean of $y$. 
 
-The variance parameter $\sigma$ is defined over positive real numbers. So our prior should only put probabilistic weight on positive values. In this case I've chosen a weakly regularising $exponential(1)$ prior. Other candidate priors are the half-cauchy distribution or the half-normal which has thinner tails.
+The variance parameter $\sigma$ is defined over positive real numbers. So our prior should only put probabilistic weight on positive values. In this case I've chosen a weakly regularising $exponential(1)$ prior. Other candidate priors are the Half-Cauchy distribution or the Half-Normal which has thinner tails.
 
 These weakly informative priors express my belief that the parameters of this model would overfit the sample and that we need to regularise their effects. Standardising the variables made this job much easier and intuitive. All together the full model looks like:
 
@@ -219,7 +219,7 @@ $$
 
 Prior predictive checks are useful for understanding the implications of our priors. Parameters are simulated from the joint prior distribution and visualised to see the implied relationships between the target and predictor variables. This will help diagnose any problems with our assumptions and modelling decisions. These checks become more important for generalised linear models since the outcome and parameter space are different due to the link function. For example, priors on parameters in a logistic regression are in the  _log-odds space_ and may behave differently to our expectations on the _outcome space_.
 
-The code below includes all the inputs necessary to estimate the model on the data. Setting `run_estimation = 0` means stan will only simulate values from the joint prior distribution since the likelihood is not evaluated (thanks to Jim for this handy [tip](https://khakieconomics.github.io/2017/04/30/An-easy-way-to-simulate-fake-data-in-stan.html)). 
+The code below includes all the inputs necessary to estimate the model on the data. Setting `run_estimation = 0` means Stan will only simulate values from the joint prior distribution since the likelihood is not evaluated (thanks to Jim for this handy [tip](https://khakieconomics.github.io/2017/04/30/An-easy-way-to-simulate-fake-data-in-stan.html)). 
 
 ```{python, eval = FALSE}
 no_pooling_stan_code = '''
@@ -293,7 +293,7 @@ npm_df_check = fit_npm_check.to_dataframe()
 
 The implied predictions of our priors are visualised below. I've arbitrarily chosen the 4th neighbourhood index ($\alpha_{j=4}$) since the priors for the neighbourhoods are the same. Weakly informative priors should create bounds between possible values while allowing for some implausible relationships. Remembering that 95\% of gaussian mass exists within two standard deviations of the mean is a useful guide for determining what is reasonable. 
 
-Let's see an example of setting uninformative priors and its implications of the data generating process. I've set the scale parameters for $\alpha$ and $\beta$ to be 10 which are quite diffuse. The implied predictions of the mean are much wider and well beyond the the minimum and maximum values in the real data. This suggests that the model is giving too much probabilistic weight to highly implausible datasets. 
+Let's see an example of setting uninformative priors and its implications of the data generating process. I've set the scale parameters for $\alpha$ and $\beta$ to be 10 which are quite diffuse. The implied predictions of the mean are much wider and well beyond the minimum and maximum values in the real data. This suggests that the model is giving too much probabilistic weight to highly implausible datasets. 
 
 ```{python, eval=FALSE}
 npm_data_check_wide = dict(N = len(df),
@@ -325,7 +325,7 @@ ax.set_title("Prior predictive checks -- Uninformative (flat) priors");
 ![](figures/5_prior_predictive_check_wide.svg)
 </center>
 
-Our original scale parameters of 1 produce more reasonable relationships. There are still some extreme regression lines implied by our data generating process, but they are bounded to more realistic outcomes relative to the diffuse priors.
+Our original scale parameters of 1 produce more reasonable relationships. There are still some extreme regression lines implied by our data generating process, but they are bound to more realistic outcomes relative to the diffuse priors.
 
 ```{python, eval=FALSE}
 _, ax = plt.subplots(figsize = (13, 8))
@@ -378,7 +378,7 @@ random_draw = 50
 # Extract the simulated (fake) data implied by the parameters in sample 10
 y_sim = npm_df_check.filter(regex = 'y_hat').iloc[random_draw, :]
 
-# Extract the parameteres corresponding to sample 10
+# Extract the parameters corresponding to sample 10
 true_parameters = npm_df_check.filter(regex = 'alpha|beta|sigma').iloc[random_draw, :]
 
 # Fit the model on the fake data
@@ -396,7 +396,7 @@ _npm_df_check = _fit_npm_check.to_dataframe()
 fake_fit = _npm_df_check.filter(regex = 'alpha|beta|sigma')
 parameter_df = pd.melt(fake_fit)
 
-# Plot will give distributions of all parameteres to see if it can capture the known parameters
+# Plot will give distributions of all parameters to see if it can capture the known parameters
 fig, axes = plt.subplots(nrows=max(2, math.ceil(fake_fit.shape[1] / 6)), ncols=6, sharex=False, sharey = False, figsize=(21,13))
 fig.suptitle('Model Checking - red lines are "true" parameters', size = 30)
 axes_list = [item for sublist in axes for item in sublist] 
@@ -442,7 +442,7 @@ npm_data = dict(N = len(df),
 # Fit model by sampling from posterior distribution
 fit_npm = no_pooling_model.sampling(data=npm_data)
 
-# For generating viusalisations using the arviz package
+# For generating visualisations using the arviz package
 npm_az = az.from_pystan(
     posterior=fit_npm,
     posterior_predictive="y_hat",
@@ -602,7 +602,7 @@ head(df)
 ```
 
 
-A scatter plot shows a positive correlation between `log(SalePrice)` and `log(LotArea)`. Fitting OLS on the logorithms of both variables assumes a linear relationship on the multiplicative scale. All else equal, property prices tend to be higher with larger lot sizes. However, this univariate linear model clearly underfits the data and there are almost surely unobserved confounding variables.
+A scatter plot shows a positive correlation between `log(SalePrice)` and `log(LotArea)`. Fitting OLS on the logarithms of both variables assumes a linear relationship on the multiplicative scale. All else equal, property prices tend to be higher with larger lot sizes. However, this univariate linear model clearly underfits the data and there are almost surely unobserved confounding variables.
 
 ```{r, eval=FALSE}
 ggplot(df, aes(x = log_lot_area, y = log_sales_price)) +
@@ -628,7 +628,7 @@ ggplot(df, aes(x = log_lot_area, y = log_sales_price)) +
 <center>
 ![](figures/3r_facet_scatter.svg)
 </center>
-We can see variation in the slopes and intercepts as well as imbalanced sampling between neighbourhood clusters. This and other unobserved confounders probably contributed to some of the weak/negative gradients. The small sample sizes in some neighbourhood will be prone to overfitting and will give noisy estimates which will require regularisation.  
+We can see variation in the slopes and intercepts as well as imbalanced sampling between neighbourhood clusters. This and other unobserved confounders probably contributed to some of the weak/negative gradients. The small sample sizes in some neighbourhoods will be prone to overfitting and will give noisy estimates which will require regularisation.  
 
 ### 2) Write out full probability model
 
@@ -638,7 +638,7 @@ We can see variation in the slopes and intercepts as well as imbalanced sampling
 2) No pooling OLS (conceptually the same as a dummy variable regression - assumes independence between all neighbourhoods)
 3) Saturated regression (adds interactive effects between `log(LotArea)_i` and `neighbourhood` to no pooling OLS)
 
-I will use no pooling OLS to demonstrate rest of the workflow. There is definitely room for improving these models. In fact, this problem is a good candidate for multilevel models. They allow for information to be borrowed between neighbourhood clusters through partial pooling and removes the assumption of independence. This will help regularise the effects of small and imbalanced sample sizes across `neighbourhood`. I will apply the full workflow using multilevel models in the next post.
+I will use no pooling OLS to demonstrate the rest of the workflow. There is definitely room for improving these models. In fact, this problem is a good candidate for multilevel models. They allow for information to be borrowed between neighbourhood clusters through partial pooling and removes the assumption of independence. This will help regularise the effects of small and imbalanced sample sizes across `neighbourhood`. I will apply the full workflow using multilevel models in the next post.
 
 ### Model specification
 
@@ -660,19 +660,19 @@ $$
 y_i = \frac{log(SalesPrice)_i - \overline{log(SalesPrice)}}{\sigma_{log(SalesPrice)}} \\
 x_i = \frac{log(LotArea)_i - \overline{log(LotArea)}}{\sigma_{log(LotArea)}}
 $$
-Standardising both outcome and predictor variables makes sampling from the posterior distribuion easier when we fit the model. If we had more continuous regressors, we could also compare the parameters on the same scale. Standardising also plays an important role in setting priors as we'll see below.
+Standardising both outcome and predictor variables makes sampling from the posterior distribution easier when we fit the model. If we had more continuous regressors, we could also compare the parameters on the same scale. Standardising also plays an important role in setting priors as we'll see below.
 
 ### Selecting priors
 
-Probability distributions need to be assigned to the parameters for this to be a bayesian model. Setting priors is an opportunity to encode domain knowledge or results from related studies into the model. Unfortunately, I do not have much domain expertise or information about the context of this dataset to give very informative priors. So I have chosen to use weakly informative priors following the advice of the [stan developers](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations). This will help me regularlise model predictions within the plausible outcome space.
+Probability distributions need to be assigned to the parameters for this to be a bayesian model. Setting priors is an opportunity to encode domain knowledge or results from related studies into the model. Unfortunately, I do not have much domain expertise or information about the context of this dataset to give very informative priors. So I have chosen to use weakly informative priors following the advice of the [Stan developers](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations). This will help me regularise model predictions within the plausible outcome space.
 
 For $\beta$ I'll assign a $Normal(0, 1)$ which puts ~95\% of the probability between two standard deviations for a unit increase in $x$. We want to hedge against overfitting by shrinking the coefficient towards zero. This is achieved by putting probability mass on all plausible values of $\beta$ with less weight on extreme relationships.
 
-$\alpha_j$ is the intercept for the $j^{th}$ neighbourhood. In a pooled OLS regression between price and lot area, the intercept $\alpha$ (ignoring the neighbourhood means ignoring the j subscript) would be interpreted as the value of of $y$ when $x$ is 0. Since $x$ has a mean of zero, $\alpha$ has the additional interpretation as the value of $y$ when $x$ is equal to its sample mean. By construction, $\alpha$ must be 0, the sample mean of $y$.
+$\alpha_j$ is the intercept for the $j^{th}$ neighbourhood. In a pooled OLS regression between price and lot area, the intercept $\alpha$ (ignoring the neighbourhood means ignoring the j subscript) would be interpreted as the value of $y$ when $x$ is 0. Since $x$ has a mean of zero, $\alpha$ has the additional interpretation as the value of $y$ when $x$ is equal to its sample mean. By construction, $\alpha$ must be 0, the sample mean of $y$.
 
-So in the case of $\alpha_j$ I set a normal prior with a mean of 0 and a standard deviaion of 1 for all neighbourhoods, regularising neighbourhood effects within two standard deviations of the grand mean of $y$. 
+So in the case of $\alpha_j$ I set a normal prior with a mean of 0 and a standard deviation of 1 for all neighbourhoods, regularising neighbourhood effects within two standard deviations of the grand mean of $y$. 
 
-The variance parameter $\sigma$ is defined over positive real numbers. So our prior should only put probabilistic weight on positive values. In this case I've chosen a weakly regularising $exponential(1)$ prior. Other candidate priors are the half-cauchy distribution or the half-normal which has thinner tails.
+The variance parameter $\sigma$ is defined over positive real numbers. So our prior should only put probabilistic weight on positive values. In this case I've chosen a weakly regularising $exponential(1)$ prior. Other candidate priors are the Half-Cauchy distribution or the Half-Normal which has thinner tails.
 
 These weakly informative priors express my belief that the parameters of this model would overfit the sample and that we need to regularise their effects. Standardising the variables made this job much easier and intuitive. All together the full model looks like:
 
@@ -688,7 +688,7 @@ $$
 
 Prior predictive checks are useful for understanding the implications of our priors. Parameters are simulated from the joint prior distribution and visualised to see the implied relationships between the target and predictor variables. This will help diagnose any problems with our assumptions and modelling decisions. These checks become more important for generalised linear models since the outcome and parameter space are different due to the link function. For example, priors on parameters in a logistic regression are in the  _log-odds space_ and may behave differently to our expectations on the _outcome space_.
 
-The code below includes all the inputs necessary to estimate the model on the data. Setting `run_estimation = 0` means stan will only simulate values from the joint prior distribution since the likelihood is not evaluated (thanks to Jim for this handy [tip](https://khakieconomics.github.io/2017/04/30/An-easy-way-to-simulate-fake-data-in-stan.html)). 
+The code below includes all the inputs necessary to estimate the model on the data. Setting `run_estimation = 0` means Stan will only simulate values from the joint prior distribution since the likelihood is not evaluated (thanks to Jim for this handy [tip](https://khakieconomics.github.io/2017/04/30/An-easy-way-to-simulate-fake-data-in-stan.html)). 
 
 ```{r eval=FALSE}
 no_pooling_stan_code = "
@@ -760,7 +760,7 @@ npm_df_check = as.data.frame(fit_npm_check)
 
 The implied predictions of our priors are visualised below. I've arbitrarily chosen the 4th neighbourhood index ($\alpha_{j=4}$) since the priors for the neighbourhoods are the same. Weakly informative priors should create bounds between possible values while allowing for some implausible relationships. Remembering that 95\% of gaussian mass exists within two standard deviations of the mean is a useful guide for determining what is reasonable. 
 
-Let's see an example of setting uninformative priors and its implications of the data generating process. I've set the scale parameters for $\alpha$ and $\beta$ to be 10 which are quite diffuse. The implied predictions of the mean are much wider and well beyond the the minimum and maximum values in the real data. This suggests that the model is giving too much probabilistic weight to highly implausible datasets. 
+Let's see an example of setting uninformative priors and its implications of the data generating process. I've set the scale parameters for $\alpha$ and $\beta$ to be 10 which are quite diffuse. The implied predictions of the mean are much wider and well beyond the minimum and maximum values in the real data. This suggests that the model is giving too much probabilistic weight to highly implausible datasets. 
 
 ```{r eval=FALSE}
 # Fit model with diffuse priors
@@ -803,7 +803,7 @@ ggplot(df_wide, aes(x = x, y = value)) +
 ![](figures/5r_prior_predictive_check_wide.svg)
 </center>
 
-Our original scale parameters of 1 produce more reasonable relationships. There are still some extreme regression lines implied by our data generating process, but they are bounded to more realistic outcomes relative to the diffuse priors.
+Our original scale parameters of 1 produce more reasonable relationships. There are still some extreme regression lines implied by our data generating process, but they are bound to more realistic outcomes relative to the diffuse priors.
 
 ```{r eval=FALSE}
 # Create length of std x variables
@@ -861,10 +861,10 @@ random_draw <- 50
 # Extract the simulated (fake) data implied by the parameters in sample 50
 y_sim <-  npm_df_check[random_draw, ] %>% select(contains('y_hat')) %>% t()
 
-# Extract the parameteres corresponding to sample 50
+# Extract the parameters corresponding to sample 50
 true_parameters = npm_df_check[random_draw,] %>% select(contains(c('alpha','beta','sigma')))
 
-# Fit the model on the fake data
+# List contains all data inputs
 npm_data_check_ = list(N = nrow(df),
                       log_sales_price = as.vector(y_sim), # target is now extracted fake data in sample 50
                       log_lot_area = as.vector(df$log_lot_area_z),
@@ -874,13 +874,16 @@ npm_data_check_ = list(N = nrow(df),
                       beta_sd = 1, 
                       run_estimation = 1)
 
+# Fit the model on the fake data
 fit_npm_check_ = stan(model_code = no_pooling_stan_code, data=npm_data_check_, chains = 4, seed = 12345)
 npm_df_check_ = as.data.frame(fit_npm_check_)
 
+# Extract parameters and tidy dataframe
 fake_fit = npm_df_check_ %>% select(contains(c('alpha', 'beta', 'sigma')))
 parameter_df = fake_fit %>% pivot_longer(everything()) %>% rename(parameters = name)
 parameter_df$parameters <- factor(parameter_df$parameters, levels = (parameter_df$parameters %>% unique()))
 
+# Plot will give distributions of all parameters to see if it can capture the known parameters
 ggplot(parameter_df, aes(value)) + 
   geom_density(colour = 'blue') + 
   facet_wrap(~parameters, scales = 'free') + 
@@ -1037,9 +1040,9 @@ Not bad for a simple model. There is definitely room for iteration and improveme
 # {-}
 
 ## Conclusion
-The last thing we should do is compare the fits of multiple models and evaluate their performance using cross validation for model selection. The next post applies the full workflow using multilevel models and compares performance using techniques such as Leave One Out - Cross Validation (LOO-CV). Model performance can also be evaluated on out of sample test data as well since this is a predictive task (kaggle computes the log RMSE of the out of sample dataset).
+The last thing we should do is compare the fits of multiple models and evaluate their performance using cross validation for model selection. The next post applies the full workflow using multilevel models and compares performance using techniques such as Leave One Out - Cross Validation (LOO-CV). Model performance can also be evaluated on out of sample test data as well since this is a predictive task (Kaggle computes the log RMSE of the out of sample dataset).
 
-This is not an exhaustive review of all the diagnostics and visualiastions that can be performed in a workflow. There are many ways of evaluating model fit and diagnostics that could validate or invalidate the model. Below are a list of resources which give more detailed examples on various bayesian models and workflows:
+This is not an exhaustive review of all the diagnostics and visualisations that can be performed in a workflow. There are many ways of evaluating model fit and diagnostics that could validate or invalidate the model. Below are a list of resources which give more detailed examples on various bayesian models and workflows:
 
 - [Stan case studies](https://mc-stan.org/users/documentation/case-studies) 
 
@@ -1121,21 +1124,3 @@ loaded via a namespace (and not attached):
 [67] lubridate_1.7.9    knitr_1.30         utf8_1.1.4         stringi_1.5.3      parallel_4.0.3     Rcpp_1.0.5        
 [73] vctrs_0.3.4        dbplyr_2.0.0       tidyselect_1.1.0   xfun_0.19         
 ```
-
-<!--
-Furthermore, I focused on variables which made sense to me 
-
-
-The dataset is contains 80 variables and 1460 rows, with the dependent (target) variable being the `SalePrice`. The 79 other features describe various characteristics of the dwelling. 
-
-
-In this post, by following and practising steps promoted by other authors, I was able to more easily debug my own issues and identify problems with my own assumptions. 
-
-This is by no means a full data analysis which attempts to give the _best_ out of sample predictive performance. Rather, it is a way of practising
-
-and identifying errors + evaluating assumptions. 
-
-I've taken what i learnt in SR and applied it to a kaggle dataset using a recommended bayesian workflow - in the spirit of being principled with my current state of knowledge. This has been inspried by JSs blog posts and more recently, MA's blog post and the visualisation paper. I do my best to replicate a robust analysis outlined by these resources. However, I stop short of MB's notebook (I still have a lot to learn!)
-
-Why? To practice and understand bayesian modelling in the context of problems - to provide my own analysis. Improve probabilistic programming.
-Stan flexible programming language. Easy to add complexity. Can run through Python and R (as opposed to language specificbrms and pymc3)-->
