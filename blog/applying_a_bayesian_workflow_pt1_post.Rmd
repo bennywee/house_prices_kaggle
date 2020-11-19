@@ -31,9 +31,9 @@ A recurring theme in applied statistics is the importance of workflow. This topi
 
 A good workflow supports quality model building. It forces us to think critically about decision making in data analysis which helps us evaluate our assumptions and identify errors. That isn't to say there is a gold standard of how all data analysis should be conducted. Rather, following a robust methodology guides modelling decisions and helps diagnose problems.  This becomes more important when adding complexity into models where it is harder to pinpoint where problems lie. 
 
-Developments around workflow are a current topic of research. The most recent paper came out on November 2nd titled [Bayesian Workflow](https://arxiv.org/pdf/2011.01808.pdf) which has many contributions from prominent members in the statistics community. This writeup was prepared before I had a chance to read the paper, but I hope it covers some of the principles and recommendations. And if not, like statistical models, the way I do data analysis will iterate and improve. 
+Developments around workflow are a current topic of research. The most recent paper came out on November 2nd titled [Bayesian Workflow](https://arxiv.org/abs/2011.01808) which has many contributions from prominent members in the statistics community. This writeup was prepared before I had a chance to read the paper, but I hope it covers some of the principles and recommendations. And if not, like statistical models, the way I do data analysis will iterate and improve. 
 
-> "Practical Bayesian data analysis, like all data analysis, is an iterative process of model building, inference, model checking and evaluation, and model expansion" - [Visualisation Bayesian Workflow - Gabry, Simpson, Vehtari, Betancourt, Gelman (2019)](https://arxiv.org/pdf/1709.01449.pdf)
+> "Practical Bayesian data analysis, like all data analysis, is an iterative process of model building, inference, model checking and evaluation, and model expansion" - [Visualisation Bayesian Workflow - Gabry, Simpson, Vehtari, Betancourt, Gelman (2019)](https://arxiv.org/abs/1709.01449)
 
 The proposed workflow I adopted was originally inspired from [blog posts](https://khakieconomics.github.io/2016/08/29/What-is-a-modern-statistical-workflow.html) by Jim Savage a few years ago and more recently, Monica Alexander's [example](https://www.monicaalexander.com/posts/2020-28-02-bayes_viz/) of visualisation in an end-to-end bayesian analysis. I've included a full list of resources which helped me at the end of this post. The steps in bold will be discussed below while an application using the full workflow will be in an upcoming writeup. 
 
@@ -1050,7 +1050,7 @@ This is not an exhaustive review of all the diagnostics and visualisations that 
 
 - Michael Betancourt's case study on a [Principled Bayesian Workflow](https://betanalpha.github.io/assets/case_studies/principled_bayesian_workflow.html#1_questioning_authority) and all his other [case studies](https://betanalpha.github.io/writing/)
 
-- [Bayesian Workflow](https://arxiv.org/pdf/2011.01808.pdf) and some links to the development of bayesian workflow over the past few years can be found [here](https://statmodeling.stat.columbia.edu/2020/11/10/bayesian-workflow/)
+- [Bayesian Workflow](https://arxiv.org/abs/2011.01808) and some links to the development of bayesian workflow over the past few years can be found [here](https://statmodeling.stat.columbia.edu/2020/11/10/bayesian-workflow/)
 
 - [Robust Statistical Workflow with PyStan](https://mc-stan.org/users/documentation/case-studies/pystan_workflow.html)
 
