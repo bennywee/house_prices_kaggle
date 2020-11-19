@@ -43,7 +43,7 @@
     
     - Which parts of the workflow will I emphasise in this post? Proposing simple models first and focussing on design decisions and evaluating assumptions at different levels. Other parts become more relevant in more complicated models which will be covered in separate post. 
      
-        - Models are deliberately simple. Want to emphasise workflow and diagnostics and interrogate assumptions. It can certainly be improved.
+            - Models are deliberately simple. Want to emphasise workflow and diagnostics and interrogate assumptions. It can certainly be improved.
  
  - WHY prior predictive checks?
          + Interrogate the consquences of modelling assumptions and design choices - expectation of the dataset before seeing data. L02

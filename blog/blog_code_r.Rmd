@@ -141,6 +141,7 @@ npm_df_check = as.data.frame(fit_npm_check)
 ```
 
 ```{r include=FALSE}
+# Fit model with diffuse priors
 npm_data_check_wide = list(N = nrow(df),
                       log_sales_price = as.vector(df$log_sales_price_z),
                       log_lot_area = as.vector(df$log_lot_area_z),
@@ -201,12 +202,23 @@ df_regularising <- df_regularising %>% mutate(x = x) %>% pivot_longer(starts_wit
 
 # Plot
 ggplot(df_regularising, aes(x = x, y = value)) +
-  geom_line(aes(group = name), size = 0.2) +
+  geom_line(aes(group = name), size = 0.2, colour = 'blue') +
   scale_x_continuous(breaks = seq(-3, 3, 1)) +
   labs(title = 'Prior predictive checks -- Weakly regularizing priors',
              x = 'x (z-scores)',
              y = 'Fitted y (z_scores)') + 
   ggsave('figures/4r_prior_predictive_check.svg', dpi = 72, height = 4, width = 7)
+```
+
+```{r}
+ggplot(df_wide, aes(x = x, y = value)) +
+  geom_line(aes(group = name), size = 0.2) +
+  geom_line(data = df_regularising, aes(group = name), size = 0.2, colour = 'blue') +
+  scale_x_continuous(breaks = seq(-3, 3, 1)) +
+  labs(title = 'Prior predictive checks -- Uninformative (black) vs weakly informative (blue)',
+             x = 'x (z-scores)',
+             y = 'Fitted y (z_scores)') + 
+  ggsave('figures/5r_prior_predictive_check_compare.svg', dpi = 72, height = 4, width = 7)
 ```
 
 
@@ -360,5 +372,5 @@ The last things we should do is compare the fits of multiple models and evaluate
 This is not an exhaustive review of all the diagnostics and visualiastions that can be performed in a workflow. There are many ways of evaluating model fit and diagnostics that could validate or invalidate the model. I hope this was a useful example of building a simple bayesian model. Please comment below if you have any thoughts or feedback!
 
 ```{r}
-sessionInfo()
+sessionInfo()-
 ```

@@ -1,0 +1,385 @@
+---
+title: "Applying a Bayesian Workflow (I)"
+output: html_notebook
+---
+
+### 1) Exploratory data analysis and data transformation
+
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(rstan)
+library(bayesplot)
+
+# Detect cores for parallel sampling
+options(mc.cores = parallel::detectCores())
+
+df = read_csv('../../data/raw/train.csv') %>% select('SalePrice', 'LotArea', 'Neighborhood')
+
+head(df)
+```
+
+```{r}
+# Perform log transfomations
+df <- df %>% mutate(log_sales_price = log(SalePrice),
+                    log_lot_area = log(LotArea),
+                    neighbourhood = as.integer(as.factor(df$Neighborhood)))
+```
+
+```{r}
+max(as.integer(as.factor(df$Neighborhood)))
+```
+
+
+```{r}
+ggplot(df, aes(x = log_lot_area, y = log_sales_price)) +
+  geom_point(colour = 'blue') +
+  geom_smooth(method = lm, se = FALSE, formula = 'y ~ x') + theme_minimal()
+```
+
+
+```{r}
+ggplot(df, aes(x = log_lot_area, y = log_sales_price)) +
+  geom_point(colour = 'blue') +
+  geom_smooth(method = lm, se = FALSE, formula = 'y ~ x', fullrange = TRUE) +
+  facet_wrap(~Neighborhood) + theme_minimal()
+```
+
+
+```{r}
+df = df %>% mutate(log_lot_area_z = scale(log_lot_area),
+                    log_sales_price_z = scale(log_sales_price))
+```
+
+$$
+y_i \sim Normal(\mu_i, \sigma) \\
+\mu_i = \alpha_{j} + \beta * x_i \\
+\alpha_j\sim Normal(0, 1)\\
+\beta\sim Normal(0, 1) \\
+\sigma\sim exp(1)
+$$
+
+
+
+
+### 3)  Prior predictive checks - simulate data from the implied generative model
+
+```{r include=FALSE}
+no_pooling_stan_code = "
+// No pooling model for predicting housing prices
+data {
+    // Fitting the model on training data
+    int<lower=0> N; // Number of rows
+    int<lower=0> neighbourhood[N]; // neighbourhood categorical variable
+    int<lower=0> N_neighbourhood; // number of neighbourhood categories
+    vector[N] log_sales_price; // log sales price
+    vector[N] log_lot_area; // log lot area
+
+    // Adjust scale parameters in python
+    real alpha_sd;
+    real beta_sd;
+    
+    // Set to zero for prior predictive checks, set to one to evaluate likelihood
+    int<lower = 0, upper = 1> run_estimation;
+}
+parameters {
+    vector[N_neighbourhood] alpha; // Vector of alpha coefficients for each neighbourhood
+    real beta;
+    real<lower=0> sigma;
+}
+model {
+    // Priors
+    target += normal_lpdf(alpha | 0, alpha_sd);
+    target += normal_lpdf(beta | 0, beta_sd);
+    target += exponential_lpdf(sigma |1);
+    //target += normal_lpdf(sigma |0, 1);
+    
+    // Likelihood
+    if(run_estimation==1){
+        target += normal_lpdf(log_sales_price | alpha[neighbourhood] + beta * log_lot_area, sigma);
+
+    }
+}
+generated quantities {
+    // Uses fitted model to generate values of interest without re running the sampler
+    vector[N] log_lik; // Log likelihood
+    vector[N] y_hat; // Predictions using training data
+    {
+    for(n in 1:N){
+          log_lik[n] = normal_lpdf(log_sales_price | alpha[neighbourhood[n]] + beta * log_lot_area[n], sigma);
+          y_hat[n] = normal_rng(alpha[neighbourhood[n]] + beta * log_lot_area[n], sigma);      
+        }
+    }
+}
+"
+
+# List contains all data inputs
+npm_data_check = list(N = nrow(df),
+                      log_sales_price = as.vector(df$log_sales_price_z),
+                      log_lot_area = as.vector(df$log_lot_area_z),
+                      neighbourhood = as.vector(df$neighbourhood),
+                      N_neighbourhood = max(df$neighbourhood),
+                      alpha_sd = 1, 
+                      beta_sd = 1, 
+                      run_estimation = 0)
+
+# Draw samples from joint prior distribution
+fit_npm_check = stan(model_code = no_pooling_stan_code, data = npm_data_check, chains = 4)
+
+# Extract samples into a pandas dataframe
+npm_df_check = as.data.frame(fit_npm_check)
+```
+
+```{r include=FALSE}
+npm_data_check_wide = list(N = nrow(df),
+                      log_sales_price = as.vector(df$log_sales_price_z),
+                      log_lot_area = as.vector(df$log_lot_area_z),
+                      neighbourhood = as.vector(df$neighbourhood),
+                      N_neighbourhood = max(df$neighbourhood),
+                      alpha_sd = 10, 
+                      beta_sd = 10, 
+                      run_estimation = 0)
+
+fit_npm_check_wide = stan(model_code = no_pooling_stan_code, data=npm_data_check_wide)
+npm_df_check_wide = as.data.frame(fit_npm_check_wide)
+#
+#_, ax = plt.subplots(figsize = (13, 8))
+#
+#x = np.linspace(-3, 3, 200)
+#
+#for alpha, beta in zip(npm_df_check_wide["alpha[4]"][:100], npm_df_check_wide["beta"][:100]):
+#    y = alpha + beta * x
+#    ax.plot(x, y, c="k", alpha=0.4)
+#
+#ax.set_xlabel("x (z-scores)")
+#ax.set_ylabel("Fitted y (z-scores)")
+#ax.set_title("Prior predictive checks -- Uninformative (flat) priors");
+```
+
+```{r}
+# Create length of std x variables
+x <- seq(from = -3, to = 3, length.out = 200)
+
+# Create empty dataframe and fill it with parameters
+df_wide <- as.data.frame(matrix(ncol=100, nrow=200))
+for (i in 1:100) {
+  alpha <- npm_df_check_wide$`alpha[4]`[i]
+  beta <- npm_df_check_wide$beta[i]
+  y[, i] <- alpha + beta * x
+  
+}
+
+# Tidy up filled dataframe
+df_wide <- y %>% mutate(x = x) %>% pivot_longer(starts_with("V"))
+
+# Plot
+ggplot(df_wide, aes(x = x, y = value)) +
+  geom_line(aes(group = name)) +
+  scale_x_continuous(breaks = seq(-3, 3, 1)) +
+  labs(title = 'Prior predictive checks -- Uninformative (flat) priors',
+             x = 'x (z-scores)',
+             y = 'Fitted y (z_scores)') + theme_minimal()
+
+```
+
+
+
+```{r}
+# Create length of std x variables
+x <- seq(from = -3, to = 3, length.out = 200)
+
+# Create empty dataframe and fill it with parameters
+df_wi <- as.data.frame(matrix(ncol=100, nrow=200))
+for (i in 1:100) {
+  alpha <- npm_df_check$`alpha[4]`[i]
+  beta <- npm_df_check$beta[i]
+  y[, i] <- alpha + beta * x
+  
+}
+
+# Tidy up filled dataframe
+df_wi <- y %>% mutate(x = x) %>% pivot_longer(starts_with("V"))
+
+# Plot
+ggplot(df_wi, aes(x = x, y = value)) +
+  geom_line(aes(group = name)) +
+  scale_x_continuous(breaks = seq(-3, 3, 1)) +
+  labs(title = 'Prior predictive checks -- Weakly regularizing priors',
+             x = 'x (z-scores)',
+             y = 'Fitted y (z_scores)') + theme_minimal()
+```
+
+
+
+### 4)  Fit model on fake data
+
+```{r include=FALSE}
+# Pick random simulation, let's say 50
+random_draw <- 50
+
+# Extract the simulated (fake) data implied by the parameters in sample 50
+y_sim <-  npm_df_check[random_draw, ] %>% select(contains('y_hat')) %>% t()
+
+# Extract the parameteres corresponding to sample 50
+true_parameters = npm_df_check[random_draw,] %>% select(contains(c('alpha','beta','sigma')))
+
+# Fit the model on the fake data
+npm_data_check_ = list(N = nrow(df),
+                      log_sales_price = as.vector(y_sim), # target is now extracted fake data in sample 50
+                      log_lot_area = as.vector(df$log_lot_area_z),
+                      neighbourhood = as.vector(df$neighbourhood),
+                      N_neighbourhood = max(df$neighbourhood),
+                      alpha_sd = 1, 
+                      beta_sd = 1, 
+                      run_estimation = 1)
+
+fit_npm_check_ = stan(model_code = no_pooling_stan_code, data=npm_data_check_, chains = 4)
+npm_df_check_ = as.data.frame(fit_npm_check_)
+
+#fake_fit = _npm_df_check.filter(regex = 'alpha|beta|sigma')
+#parameter_df = pd.melt(fake_fit)
+#
+## Plot will give distributions of all parameteres to see if it can capture the known parameters
+#fig, axes = plt.subplots(nrows=max(2, math.ceil(fake_fit.shape[1] / 6)), ncols=6, sharex=False, sharey = True, figsize=(21,13))
+#fig.suptitle('Model Checking - red lines are "true" parameters', size = 30)
+#axes_list = [item for sublist in axes for item in sublist] 
+#parameters = parameter_df[['variable']].drop_duplicates().set_index('variable').index
+#grouped = parameter_df.groupby("variable")
+#
+#for parameter in parameters:
+#    selection = grouped.get_group(parameter)
+#    ax = axes_list.pop(0)
+#    selection.plot.kde(label=parameter, ax=ax, legend=False)
+#    ax.set_title(parameter)
+#    ax.grid(linewidth=0.25)
+#    ax.axvline(x=true_parameters[parameter], color='red', linestyle='--', alpha = 0.5)
+#
+## Now use the matplotlib .remove() method to delete anything we didn't use
+#for ax in axes_list:
+#    ax.remove()
+#
+#plt.tight_layout()
+```
+
+```{r}
+fake_fit = npm_df_check_ %>% select(contains(c('alpha', 'beta', 'sigma')))
+parameter_df = fake_fit %>% pivot_longer(everything()) %>% rename(parameters = name)
+parameter_df$parameters <- factor(parameter_df$parameters, levels = (parameter_df$parameters %>% unique()))
+
+ggplot(parameter_df, aes(value)) + 
+  geom_density(colour = 'blue') + 
+  facet_wrap(~parameters, scales = 'free') + 
+  geom_vline(data = (true_parameters %>% pivot_longer(everything()) %>% rename(parameters = name)), aes(xintercept = value), colour = 'red') + 
+  labs(title = 'Model Checking - red lines are "true" parameters',
+       x = '') +
+  theme_minimal()
+```
+
+
+
+### 5)  Estimate model on real data
+
+Set `run_estimation=1` and run the code to fit the model. Stan will sample the joint posterior distribution using the default Markov chain Monte Carlo (MCMC) algorithm, the [No-U-Turn sampler (NUTs)](https://mc-stan.org/docs/2_18/reference-manual/hmc-algorithm-parameters.html).
+
+```{r include=FALSE}
+# Dictionary with data inputs - set run_estimation=1
+npm_data = list(N = nrow(df),
+                      log_sales_price = as.vector(df$log_sales_price_z),
+                      log_lot_area = as.vector(df$log_lot_area_z),
+                      neighbourhood = as.vector(df$neighbourhood),
+                      N_neighbourhood = max(df$neighbourhood),
+                      alpha_sd = 1, 
+                      beta_sd = 1, 
+                      run_estimation = 1)
+
+# Fit model by sampling from posterior distribution
+fit_npm = stan(model_code = no_pooling_stan_code, data = npm_data, chains = 4)
+
+# Extract samples into dataframe
+fit_npm_df = as.data.frame(fit_npm)
+```
+
+### 6) Check whether MCMC sampler and model fit
+Stan won't have trouble sampling from such a simple model, so I won't go through chain diagnostics. However, we can see the posterior distributions of all the parameters by looking at the traceplot:
+```{r echo=FALSE}
+# Inspect model fit
+color_scheme_set("mix-blue-red")
+
+mcmc_combo(
+ as.array(fit_npm),
+ combo = c("dens_overlay", "trace"),
+ pars = c('beta', 'sigma'),
+ gg_theme = legend_none())
+)
+```
+
+<center>
+![](figures/7_trace_plot.svg)
+</center>
+
+### 7) Posterior predictive check to evaluate model performance
+How well did the model perform? We can perform posterior predictive checks to see if sampled distributions from the fitted model can approximate the density of `SalesPrice` in the training data. If the model performs well, it should be able to retrodict the density of the data used to train the model. The blue lines are the predictions drawn from the joint posterior distribution compared with the observed density of the target $y$ variable.
+
+
+```{python, eval=FALSE}
+az.plot_ppc(data = npm_az, 
+            kind = 'kde', 
+            data_pairs = {'log_sales_price' : 'y_hat'},
+            legend = True,
+            color='cyan',
+            mean = False,
+            figsize=(8, 5),
+            alpha = 0.5,
+            num_pp_samples=200)
+```
+
+<center>
+![](figures/8_posterior_predictive_check.svg)
+</center>
+
+Reversing the data transformations gives back the posterior predictive checks on the natural scale (rescale $y$ and exponentiate `log(SalesPrice)` to get back `SalesPrice`:
+
+```{python,eval=FALSE}
+fig, axes = plt.subplots(1,1, figsize = (13, 8))
+np.exp(fit_npm_df.filter(regex = 'y_hat')*df['log_sales_price'].mean()) \\
+                                                               .T\\
+                                                               .iloc[:, :300]\\
+                                                               .plot.kde(legend = False, 
+                                                                         title = 'Posterior predcitve checks', 
+                                                                         xlim = (30000,500000),
+                                                                         alpha = 0.1,
+                                                                         ax = axes);
+df['SalePrice'].plot.kde(legend = False, 
+                         xlim = (30000,500000),
+                         alpha = 1,
+                         ax = axes);
+```
+<center>
+![](figures/9_posterior_predictive_check_outcomescale.svg)
+</center>
+
+Not bad for a simple model. There is definitely room for iteration and improvement.
+
+### Conclusion
+
+The last things we should do is compare the fits of multiple models and evaluate their performance using cross validation. Since we only fitted a single model, I have reserved this for the next post which applies the complete workflow on more complex multilevel/hierarchical models. Model performance can also be evaluated on out of sample test data as well since this is a predictive task (this kaggle competition computes the log RMSE of the out of sample dataset).
+
+This is not an exhaustive review of all the diagnostics and visualiastions that can be performed in a workflow. There are many ways of evaluating model fit and diagnostics that could validate or invalidate the model. I hope this was a useful example of building a simple bayesian model. Please comment below if you have any thoughts or feedback!
+
+
+```
+%load_ext watermark
+%watermark -n -v -u -iv -w -a Benjamin_Wee
+
+pandas  1.1.3
+arviz   0.10.0
+seaborn 0.11.0
+pystan  2.19.0.0
+numpy   1.19.1
+Benjamin_Wee 
+last updated: Sat Nov 07 2020 
+
+CPython 3.6.12
+IPython 5.8.0
+watermark 2.0.2
+```

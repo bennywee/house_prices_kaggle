@@ -16,9 +16,14 @@ output:
 }
 </style>
 
+<!-- Change scales on prior predictive checks.
+- Bringing other people for model criticism.
+- 
+-->
+
 <!--"A technical post aimed at DSs/statisticians. I do not cover what bayesian statistics is, its distinction from frequentist statistics or machine learning nor why it's useful and why fitting bayesian models are useful. There are numerous other posts on that matter. Although the various types of output and model inferences that can be made will be talked about in another post"
 
-I've chosen to use [Stan](https://mc-stan.org/) to do my modelling. Stan is a probabilistic programming language that can fleixbly estimate a wide range of probabilistic and bayesian models. It uses state of the art samplers such as hamiltonian monte carlo (HMC) which allows efficient estimation of models with high dimensions without the need for conjugate priors. It is used across academia and industry and noteably in facebook's open source forecasting tool, [prophet](https://facebook.github.io/prophet/)
+I've chosen to use [Stan](https://mc-stan.org/) to do my modelling. Stan is a probabilistic programming language that can flexibly estimate a wide range of probabilistic and bayesian models. It uses state of the art samplers such as hamiltonian monte carlo (HMC) which allows efficient estimation of models with high dimensions without the need for conjugate priors. It is used across academia and industry and noteably in facebook's open source forecasting tool, [prophet](https://facebook.github.io/prophet/)
 
 
 
@@ -26,20 +31,23 @@ I spent the last few years studying Bayesian statistics in my spare time. Most r
 
 So I decided to apply what I've learned so far using the Ames Housing Dataset from the kaggle competition [House Prices: Advanced Regression Techniques](https://www.kaggle.com/c/house-prices-advanced-regression-techniques/overview). The goal is to practise what I've learned in my self study journey and hopefully demonstrate some of the best practices advocated by those in the applied statistics community.
 
-I've chosen to use [Stan](https://mc-stan.org/) to do my modelling (it can be called from both R and Python). Stan is a probabilistic programming language that can fleixbly estimate a wide range of probabilistic and bayesian models. It uses state of the art algorithms such as hamiltonian monte carlo (HMC) which allows efficient sampling of models in high dimensions without the need for conjugate priors. Stan is used across academia and industry and noteably in facebook's open source forecasting tool, [prophet](https://facebook.github.io/prophet/). 
+I've chosen to use [Stan](https://mc-stan.org/) to do my modelling (it can be called from both R and Python). Stan is a probabilistic programming language that can flexibly estimate a wide range of probabilistic and bayesian models. It uses state of the art algorithms such as hamiltonian monte carlo (HMC) which allows efficient sampling of models in high dimensions without the need for conjugate priors. Stan is used across academia and industry and noteably in facebook's open source forecasting tool, [prophet](https://facebook.github.io/prophet/). 
 
 I spent the last few years studying Bayesian statistics in my spare time. Self-study has been a fascinating journey of designing my own curriculum and getting to grips with how to learn without guidance. Thankfully, the open source and statistics community are amazing in answering questions and helping people learn.
 -->
 
-<!-- t/LI: It's been a fascinating journey so far, from designing my own curriculum to figuring out with how to self-study with curiosity and rigour. Bayesian statistics at first glance is quite intimidating, let alone trying to grasp it without formal guidance. But I've been really lucky that the open source + statistics community are always encouraging and genuine in helping people to learn.  It is rightfully one of the most popular entry level texts in bayesian statistics. -->
+<!-- t/LI: It's been a fascinating journey so far, from designing my own curriculum to figuring out with how to self-study with curiosity and rigour. Bayesian statistics at first glance is quite intimidating, let alone trying to grasp it without formal guidance. But I've been really lucky that the open source + statistics community are always encouraging and genuine in helping people to learn.  It is rightfully one of the most popular entry level texts in bayesian statistics. 
+ 
+His course discusses _how_ to think about modelling and data in a very accessible way.
+-->
 
-I spent the last few years studying Bayesian statistics in my spare time. Most recently, I completed Richard McElreath's [Statistical Rethinking](https://xcelab.net/rm/statistical-rethinking/) - including his 2017 lecture series and problem sets. It is rightfully one of the most popular entry level texts in bayesian statistics. His course discusses _how_ to think about modelling and data in a very accessible way. I could not recommended it more highly. 
+I spent the last few years studying Bayesian statistics in my spare time. Most recently, I completed Richard McElreath's [Statistical Rethinking](https://xcelab.net/rm/statistical-rethinking/) - including his 2017 lecture series and problem sets. It is rightfully one of the most popular entry level texts in bayesian statistics. I could not recommended it more highly. 
 
 While I've gained a lot from doing problem sets and discussing course material with other people, nothing beats testing your knowledge and challenging imposter syndrome by attempting a modelling problem on your own.
 
 So I decided to apply what I've learned so far on the kaggle dataset: [House Prices: Advanced Regression Techniques](https://www.kaggle.com/c/house-prices-advanced-regression-techniques/overview). The goal is to practise what I've learned in my self study journey and hopefully demonstrate some of the best practices advocated by those in the applied statistics community. This writeup was completed in R and Python (you'll get to choose below) and Stan* for modelling. 
 
-*[Stan](https://mc-stan.org/)  is a probabilistic programming language that can fleixbly estimate a wide range of probabilistic and bayesian models. It uses state of the art algorithms such as hamiltonian monte carlo (HMC) which allows efficient sampling of models in high dimensions without the need for conjugate priors. Stan is used across academia and industry and notably in facebook's open source forecasting tool, [prophet](https://facebook.github.io/prophet/). 
+*[Stan](https://mc-stan.org/)  is a probabilistic programming language that can flexibly estimate a wide range of probabilistic and bayesian models. It uses state of the art algorithms such as hamiltonian monte carlo (HMC) which allows efficient sampling of models in high dimensions without the need for conjugate priors. Stan is used across academia and industry and notably in facebook's open source forecasting tool, [prophet](https://facebook.github.io/prophet/). 
 
 <!--
 
@@ -48,7 +56,7 @@ I decided to writeup an example of using a bayesian workflow using a dataset fro
 
 A recurring theme from members of the bayesian community is the importance of workflow. My formal education in econometrics placed more emphasis on tools and derivations for applied predictive or causal inference. "Workflow" or the _structure_ of data analysis and model building was not explicitly covered. At best, components of workflow were explored in some applied research seminars.
 
-inspired from [blog posts](https://khakieconomics.github.io/2016/08/29/What-is-a-modern-statistical-workflow.html) by Jim Savage a few years ago and more recently Monica Alexander's [example](https://www.monicaalexander.com/posts/2020-28-02-bayes_viz/) of visualiastion in an end to end bayesian analysis. This was reinforced by the visualisation in bayesian workflow paper by ...-->
+inspired from [blog posts](https://khakieconomics.github.io/2016/08/29/What-is-a-modern-statistical-workflow.html) by Jim Savage a few years ago and more recently Monica Alexander's [example](https://www.monicaalexander.com/posts/2020-28-02-bayes_viz/) of visualiastion in an end-to-end bayesian analysis. This was reinforced by the visualisation in bayesian workflow paper by ...-->
 
 <!-- what is stan and why did i choose it? not brms/pymc3-->
 <!--
@@ -68,7 +76,7 @@ A recurring theme in applied statistics is the importance of workflow. This topi
 
 <!--A recurring theme in applied statistics is the importance of workflow. My formal education in econometrics placed more emphasis on tools and derivations for applied predictive or causal inference. "Workflow" or the _structure_ of data analysis and model building was not explicitly covered. At best, components of workflow were explored in some applied research seminars.-->
 
-A good workflow supports quality model building. It forces us to think critically about decision making in data analysis which helps us evaluate our assumptions and identify errors. That isn't to say there is a gold standard of how all data analysis should be conducted. Rather, following a robust methodology guides modelling decisions and helps diagnose problems when iterating on model complexity.
+A good workflow supports quality model building. It forces us to think critically about decision making in data analysis which helps us evaluate our assumptions and identify errors. That isn't to say there is a gold standard of how all data analysis should be conducted. Rather, following a robust methodology guides modelling decisions and helps diagnose problems.  This becomes more important when adding complexity into models where it is harder to pinpoint where problems lie. 
 
 Developments around workflow are a current topic of research. The most recent paper came out on November 2nd titled [Bayesian Workflow](https://arxiv.org/pdf/2011.01808.pdf) which has many contributions from prominent members in the statistics community. This writeup was prepared before I had a chance to read the paper, but I hope it covers some of the principles and recommendations. And if not, like statistical models, the way I do data analysis will iterate and improve. 
 
@@ -77,7 +85,7 @@ Developments around workflow are a current topic of research. The most recent pa
 
 > "Practical Bayesian data analysis, like all data analysis, is an iterative process of model building, inference, model checking and evaluation, and model expansion" - [Visualisation Bayesian Workflow - Gabry, Simpson, Vehtari, Betancourt, Gelman (2019)](https://arxiv.org/pdf/1709.01449.pdf)
 
-The proposed workflow I adopted was originally inspired from [blog posts](https://khakieconomics.github.io/2016/08/29/What-is-a-modern-statistical-workflow.html) by Jim Savage a few years ago and more recently, Monica Alexander's [example](https://www.monicaalexander.com/posts/2020-28-02-bayes_viz/) of visualiastion in an end to end bayesian analysis. I've included a full list of resources which helped me at the end of this post. The steps in bold will be discussed today while an application using the full workflow will be in an upcoming writeup. 
+The proposed workflow I adopted was originally inspired from [blog posts](https://khakieconomics.github.io/2016/08/29/What-is-a-modern-statistical-workflow.html) by Jim Savage a few years ago and more recently, Monica Alexander's [example](https://www.monicaalexander.com/posts/2020-28-02-bayes_viz/) of visualiastion in an end-to-end bayesian analysis. I've included a full list of resources which helped me at the end of this post. The steps in bold will be discussed below while an application using the full workflow will be in an upcoming writeup. 
 
 <!--This was reinforced by the visualisation in bayesian workflow paper quoted above.
 
@@ -127,6 +135,8 @@ he objective of this competition was to predict the `SalePrice` and minimise RMS
 ### 1) Exploratory data analysis and data transformation
 
 The full dataset for this competition contains 79 features to predict the target variable `SalesPrice`. For this exercise I will focus on two variables: `Neighbourhood` (categorical: physical locations within Ames city limits) and `LotArea` (positive real: lot size in square feet). I chose these variables as they are consistent with my understanding of how housing prices vary in relation to their location and property size.
+
+Aside: The model and feature selection in this example are deliberately simple. The goal is to motivate workflow, diagnostics and to interrogate assumptions, so I only used two variables to make it easier to follow. My [repo](https://github.com/bennywee/house_prices_kaggle) contains examples of other models and additional features.
 
 <!--Note: The models I propose in this example are deliberately simple. I want to emphasise workflow, diagnostics and to clearly layout my decision making and assumptions for criticism. It is by no means a comprehensive analysis which considers _all_ features to maximise predictive performance -- there are plenty of examples of that for this competition. -->
 
@@ -435,7 +445,7 @@ npm_df_check = fit_npm_check.to_dataframe()
 
 The implied predictions of our priors are visualised below. I've arbitrarily chosen the 4th neighbourhood index ($\alpha_{j=4}$) since the priors for the neighbourhoods are the same. Weakly informative priors should create bounds between possible values while allowing for some implausible relationships. Remembering that 95\% of gaussian mass exists within two standard deviations of the mean is a useful guide for determining what is reasonable. 
 
-Let's see an example of setting uninformative priors and its implications of the data generating process. I've set the scale parameters for $\alpha$ and $\beta$ to be 10 which are quite diffuse. The implied predictions of the mean are much wider are well beyond the the minimum and maximum values in the real data. This suggests that the model is giving too much probabilistic weight to highly implausible datasets. 
+Let's see an example of setting uninformative priors and its implications of the data generating process. I've set the scale parameters for $\alpha$ and $\beta$ to be 10 which are quite diffuse. The implied predictions of the mean are much wider and well beyond the the minimum and maximum values in the real data. This suggests that the model is giving too much probabilistic weight to highly implausible datasets. 
 
 ```{python, eval=FALSE}
 npm_data_check_wide = dict(N = len(df),
@@ -476,7 +486,7 @@ x = np.linspace(-3, 3, 200)
 
 for alpha, beta in zip(npm_df_check["alpha[4]"][:100], npm_df_check["beta"][:100]):
     y = alpha + beta * x
-    ax.plot(x, y, c="k", alpha=0.4)
+    ax.plot(x, y, c="blue", alpha=0.4)
 
 ax.set_xlabel("x (z-scores)")
 ax.set_ylabel("Fitted y (z-scores)")
@@ -486,6 +496,12 @@ ax.set_title("Prior predictive checks -- Weakly regularizing priors")
 
 <center>
 ![](figures/4_prior_predictive_check.svg)
+</center>
+
+Putting both sets of lines on the same scale emphasises the difference in simulated values. The blue lines from the previous graph cover a tighter space relative to the simulations from the uninformative priors.
+
+<center>
+![](figures/5_prior_predictive_check_compare.svg)
 </center>
 
 <!--Remember that ~95\% of gaussian mass exists within two standard deviations of the mean. So we should keep this in mind when choosing weakly informative priors to ensure that we create bounds to values which are possible while allowing relationships which are implausible. I've included an example of what happens if we choose extremely wide (uninformative) priors and its implications on the data generating process. -->
@@ -914,7 +930,7 @@ convergence, Rhat=1).
 # {-}
 
 ## Conclusion
-The last thing we should do is compare the fits of multiple models and evaluate their performance using cross validation for model selection. The next post applies the full workflow using multilevel models and compares performance using techniques such as leave one out cross validation (LOO-CV). Model performance can also be evaluated on out of sample test data as well since this is a predictive task (kaggle computes the log RMSE of the out of sample dataset).
+The last thing we should do is compare the fits of multiple models and evaluate their performance using cross validation for model selection. The next post applies the full workflow using multilevel models and compares performance using techniques such as Leave One Out - Cross Validation (LOO-CV). Model performance can also be evaluated on out of sample test data as well since this is a predictive task (kaggle computes the log RMSE of the out of sample dataset).
 
 This is not an exhaustive review of all the diagnostics and visualiastions that can be performed in a workflow. There are many ways of evaluating model fit and diagnostics that could validate or invalidate the model. Below are a list of resources which give more detailed examples on various bayesian models and workflows:
 
@@ -933,9 +949,9 @@ This is not an exhaustive review of all the diagnostics and visualiastions that 
 
 Notebooks that reproduce the models/plots/etc:
 
-[Python]()
+[Python](https://github.com/bennywee/house_prices_kaggle/blob/blog/blog/blog_code_python.ipynb)
 
-[R]()
+[R](https://github.com/bennywee/house_prices_kaggle/blob/blog/blog/blog_code_r.Rmd)
 <!--Since we only fitted a single model, I have reserved this for the next post which applies the complete workflow on more complex multilevel/hierarchical models. 
 I hope this was a useful example of building a simple bayesian model. Please comment below if you have any thoughts or feedback!
 -->
