@@ -1056,9 +1056,9 @@ This is not an exhaustive review of all the diagnostics and visualiastions that 
 
 Notebooks that reproduce the models/plots/etc:
 
-[Python](https://github.com/bennywee/house_prices_kaggle/blob/blog/blog/blog_code_python.ipynb)
+[Python](https://github.com/bennywee/house_prices_kaggle/blob/master/blog/blog_code_python.ipynb)
 
-[R](https://github.com/bennywee/house_prices_kaggle/blob/blog/blog/blog_code_r.Rmd)
+[R](https://github.com/bennywee/house_prices_kaggle/blob/master/blog/blog_code_r.Rmd)
 
 [Return home](https://bennywee.github.io/)
 
@@ -1067,13 +1067,13 @@ Notebooks that reproduce the models/plots/etc:
 %load_ext watermark
 %watermark -n -v -u -iv -w -a Benjamin_Wee
 
+seaborn 0.11.0
 pandas  1.1.3
 arviz   0.10.0
-seaborn 0.11.0
 pystan  2.19.0.0
 numpy   1.19.1
 Benjamin_Wee 
-last updated: Sat Nov 07 2020 
+last updated: Thu Nov 19 2020 
 
 CPython 3.6.12
 IPython 5.8.0
