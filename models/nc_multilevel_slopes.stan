@@ -41,7 +41,7 @@ model {
     vector[N] beta_nh;
     
     // Priors
-    target += normal_lpdf(alpha | 1, alpha_sd);
+    target += normal_lpdf(alpha | 0, alpha_sd);
     target += normal_lpdf(beta | 0, beta_sd);
     target += normal_lpdf(sigma | 0 , sigma_sd);
     target += normal_lpdf(sigma_nh | 0 , sigma_nh_sd);

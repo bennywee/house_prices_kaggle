@@ -1,14 +1,18 @@
 // Simple linear model for predicting housing prices
 data {
-    int N; // Number of rows
+    // Fitting the model on training data
+    int<lower=0> N; // Number of rows
     vector[N] log_sales_price; // log sales price
     vector[N] log_lot_area; // log lot area
+
+    // Estimating model on test data
+    int<lower=0> N_test; // Number of rows
+    vector[N_test] log_lot_area_test; // log lot area test data
+    
+    // Adjust scale parameters in python
     real alpha_sd;
     real beta_sd;
-    
-    // out of sample prediction
-    int N_test;
-    vector[N_test] log_lot_area_test;
+    real sigma_sd;
     
     // Set to zero for prior predictive checks, set to one to evaluate likelihood
     int<lower = 0, upper = 1> run_estimation;
@@ -20,11 +24,11 @@ parameters {
 }
 model {
     // Priors
-    target += normal_lpdf(alpha | 1, alpha_sd);
+    target += normal_lpdf(alpha | 0, alpha_sd);
     target += normal_lpdf(beta | 0, beta_sd);
-    //target += exponential_lpdf(sigma | 1);
-    target += normal_lpdf(sigma |0, 1);
-    
+    //target += normal_lpdf(sigma |0, sigma_sd);
+    target += exponential_lpdf(sigma | 1);
+
     // Likelihood
     if(run_estimation==1){
         target += normal_lpdf(log_sales_price | alpha + beta * log_lot_area, sigma);

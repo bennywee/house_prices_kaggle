@@ -24,7 +24,6 @@ model {
     target += normal_lpdf(alpha | 0, alpha_sd);
     target += normal_lpdf(beta | 0, beta_sd);
     target += exponential_lpdf(sigma |1);
-    //target += normal_lpdf(sigma |0, 1);
     
     // Likelihood
     if(run_estimation==1){
@@ -33,7 +32,7 @@ model {
     }
 }
 generated quantities {
-    // Uses fitted model to generate values of interest without re running the sampler
+    // Uses fitted model to generate values of interest
     vector[N] log_lik; // Log likelihood
     vector[N] y_hat; // Predictions using training data
     {

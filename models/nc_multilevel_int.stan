@@ -13,6 +13,13 @@ data {
     
     // Switch to evaluate likelihood
     int<lower = 0, upper = 1> run_estimation; // Set to zero for prior predictive checks, set to one to evaluate likelihood
+    
+    //Adjust parameters
+    real<lower=0> alpha_sd;
+    real<lower=0> beta_sd;
+    real<lower=0> sigma_sd;
+    real<lower=0> sigma_nh_sd;
+    real<lower=0> za_nh_sd;
 }
 parameters {
     real alpha;
@@ -30,12 +37,12 @@ model {
     vector[N] alpha_nh;
     
     // Priors
-    target += normal_lpdf(alpha | 1, 0.01);
-    target += normal_lpdf(beta | 0, 0.1);
-    target += normal_lpdf(sigma |0, 1);
+    target += normal_lpdf(alpha | 0, alpha_sd);
+    target += normal_lpdf(beta | 0, beta_sd);
+    target += normal_lpdf(sigma |0, sigma_sd);
     
-    target += normal_lpdf(za_nh | 0, 1);
-    target += normal_lpdf(sigma_nh | 0 , 1);
+    target += normal_lpdf(za_nh | 0, za_nh_sd);
+    target += normal_lpdf(sigma_nh | 0 , sigma_nh_sd);
 
     //linear model
     alpha_nh = alpha + za_nh[neighbourhood] * sigma_nh;
