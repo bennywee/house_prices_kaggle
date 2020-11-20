@@ -5,6 +5,7 @@ output:
   html_document:
     includes:
       in_header: myheader.html
+      after_body: myfooter.html
     theme: cosmo
     code_folding: hide
     df_print: paged
@@ -1079,7 +1080,9 @@ Notebooks that reproduce the models/plots/etc:
 [Return home](https://bennywee.github.io/)
 
 ## Original Computing Environment
-```
+
+```{r eval=FALSE}
+############# Python #######################
 %load_ext watermark
 %watermark -n -v -u -iv -w -a Benjamin_Wee
 
@@ -1094,8 +1097,8 @@ last updated: Thu Nov 19 2020
 CPython 3.6.12
 IPython 5.8.0
 watermark 2.0.2
-```
-```
+
+################# R #######################
 sessionInfo()
 
 R version 4.0.3 (2020-10-10)
