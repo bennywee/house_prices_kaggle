@@ -3,17 +3,30 @@ title: "Applying a bayesian workflow: lessons from Statistical Rethinking (I)"
 author: "Benjamin Wee"
 output: 
   html_document:
+    includes:
+      in_header: myheader.html
     theme: cosmo
     code_folding: hide
     df_print: paged
     anchor_sections: false
 ---
 
+```{r setup, include=FALSE}
+#Create myheader.html
+#fileConn <- file("myheader.html")
+#writeLines("<meta property='og:title' content='Applying a bayesian workflow: lessons from Statistical Rethinking (I)'/>
+#<meta property='og:image' content='https://raw.githubusercontent.com/bennywee/house_prices_kaggle/master/blog/9r_posterior_predictive_check_outcomescale.png'/>
+#<meta property='og:description' content='A modelling workflow in Stan, Python and R'/>
+#<meta property='og:url' content='https://bennywee.github.io/assets/posts/applying_a_bayesian_workflow_pt1_post.html'/>", fileConn)
+#close(fileConn)
+```
+
 <style type="text/css">
   body{
   font-size: 12pt;
 }
 </style>
+
 
 [Return home](https://bennywee.github.io/)
 
@@ -289,7 +302,7 @@ fit_npm_check = no_pooling_model.sampling(data=npm_data_check, seed = 12345)
 npm_df_check = fit_npm_check.to_dataframe()
 ```
 
-> For the prior predictive checks, we recommend not cleaving too closely to the observed data and instead aiming for a prior data generating process that can produce plausible data sets, not necessarily ones that are indistinguishable from observed data. - [Visualisation Bayesian Workflow - Gabry, Simpson, Vehtari, Betancourt, Gelman (2019)](https://arxiv.org/pdf/1709.01449.pdf)
+> For the prior predictive checks, we recommend not cleaving too closely to the observed data and instead aiming for a prior data generating process that can produce plausible data sets, not necessarily ones that are indistinguishable from observed data. - [Visualisation Bayesian Workflow - Gabry, Simpson, Vehtari, Betancourt, Gelman (2019)](https://arxiv.org/abs/1709.01449)
 
 The implied predictions of our priors are visualised below. I've arbitrarily chosen the 4th neighbourhood index ($\alpha_{j=4}$) since the priors for the neighbourhoods are the same. Weakly informative priors should create bounds between possible values while allowing for some implausible relationships. Remembering that 95\% of gaussian mass exists within two standard deviations of the mean is a useful guide for determining what is reasonable. 
 
@@ -756,7 +769,7 @@ fit_npm_check = stan(model_code = no_pooling_stan_code, data = npm_data_check, c
 npm_df_check = as.data.frame(fit_npm_check)
 ```
 
-> For the prior predictive checks, we recommend not cleaving too closely to the observed data and instead aiming for a prior data generating process that can produce plausible data sets, not necessarily ones that are indistinguishable from observed data. - [Visualisation Bayesian Workflow - Gabry, Simpson, Vehtari, Betancourt, Gelman (2019)](https://arxiv.org/pdf/1709.01449.pdf)
+> For the prior predictive checks, we recommend not cleaving too closely to the observed data and instead aiming for a prior data generating process that can produce plausible data sets, not necessarily ones that are indistinguishable from observed data. - [Visualisation Bayesian Workflow - Gabry, Simpson, Vehtari, Betancourt, Gelman (2019)](https://arxiv.org/abs/1709.01449)
 
 The implied predictions of our priors are visualised below. I've arbitrarily chosen the 4th neighbourhood index ($\alpha_{j=4}$) since the priors for the neighbourhoods are the same. Weakly informative priors should create bounds between possible values while allowing for some implausible relationships. Remembering that 95\% of gaussian mass exists within two standard deviations of the mean is a useful guide for determining what is reasonable. 
 
