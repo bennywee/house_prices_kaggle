@@ -385,10 +385,10 @@ ax.set_title("Prior predictive checks -- Uninformative (black) vs weakly informa
 We can use the simulations to see if our model can successfully estimate the parameters used to generate fake data (the implied $\hat{y}$). Take a draw from the prior samples (e.g. the 50th simulation) and estimate the model on the fake data produced by these parameters. Let's see if the model fitted on fake data can capture the "true" parameters (dotted red lines) of the data generating process. If the model cannot capture the _known_ parameters which generated fake data, there is no certainty it will be estimating the correct parameters on real data.
 
 ```{python, eval=FALSE}
-# Pick random simulation, let's say 10
+# Pick random simulation, let's say 50
 random_draw = 50
 
-# Extract the simulated (fake) data implied by the parameters in sample 10
+# Extract the simulated (fake) data implied by the parameters in sample 50
 y_sim = npm_df_check.filter(regex = 'y_hat').iloc[random_draw, :]
 
 # Extract the parameters corresponding to sample 10
@@ -396,7 +396,7 @@ true_parameters = npm_df_check.filter(regex = 'alpha|beta|sigma').iloc[random_dr
 
 # Fit the model on the fake data
 _npm_data_check = dict(N = len(df),
-              log_sales_price = y_sim, # this is now fitting on the extracted fake data in sample 10
+              log_sales_price = y_sim, # this is now fitting on the extracted fake data in sample 50
               log_lot_area = df['log_lot_area_z'],
               neighbourhood = df['neighbourhood'],
               N_neighbourhood = len(df['Neighborhood'].unique()),
@@ -566,7 +566,7 @@ az.plot_ppc(data = npm_az,
 ![](figures/8_posterior_predictive_check.png)
 </center>
 
-Reversing the data transformations gives back the posterior predictive checks on the natural scale (rescale $y$ and exponentiate `log(SalesPrice)` to get back `SalesPrice`:
+Reversing the data transformations gives back the posterior predictive checks on the natural scale (rescale $y$ and exponentiate `log(SalesPrice)` to get back `SalesPrice`):
 
 ```{python,eval=FALSE}
 fig, axes = plt.subplots(1,1, figsize = (13, 8))
@@ -1026,7 +1026,7 @@ ppc_dens_overlay(as.vector(df$log_sales_price_z), yrep[samples, ])
 ![](figures/8r_posterior_predictive_check.png)
 </center>
 
-Reversing the data transformations gives back the posterior predictive checks on the natural scale (rescale $y$ and exponentiate `log(SalesPrice)` to get back `SalesPrice`:
+Reversing the data transformations gives back the posterior predictive checks on the natural scale (rescale $y$ and exponentiate `log(SalesPrice)` to get back `SalesPrice`):
 
 ```{r eval=FALSE}
 # Take 300 samples of posterior predictive checks and revert back to natural scale
