@@ -382,7 +382,7 @@ ax.set_title("Prior predictive checks -- Uninformative (black) vs weakly informa
 ![](figures/5_prior_predictive_check_compare.svg)
 
 ### 4)  Fit model on fake data
-We can use the simulations to see if our model can successfully estimate the parameters used to generate fake data (the implied $\hat{y}$). Take a draw from the prior samples (e.g. the 50th simulation) and estimate the model on the fake data produced by these parameters. Let's see if the model fitted on fake data can capture the "true" parameters (dotted red lines) of the data generating process. If the model cannot capture the _known_ parameters which generated fake data, there is no certainty it will be estimating the correct parameters on real data.
+We can use the simulations to see if our model can successfully estimate the parameters used to generate fake data (the implied $\hat{y}$). Take a draw from the prior samples (e.g. the 50th simulation) and estimate the model on the data produced by these parameters. Let's see if the model fitted on fake data can capture the "true" parameters (dotted red lines) of the data generating process. If the model cannot capture the _known_ parameters which generated fake data, there is no certainty it will be estimating the correct parameters on real data.
 
 ```{python, eval=FALSE}
 # Pick random simulation, let's say 50
@@ -865,7 +865,7 @@ ggplot(df_wide, aes(x = x, y = value)) +
 </center>
 
 ### 4)  Fit model on fake data
-We can use the simulations to see if our model can successfully estimate the parameters used to generate fake data (the implied $\hat{y}$). Take a draw from the prior samples (e.g. the 50th simulation) and estimate the model on the fake data produced by these parameters. Let's see if the model fitted on fake data can capture the "true" parameters (dotted red lines) of the data generating process. If the model cannot capture the _known_ parameters which generated fake data, there is no certainty it will be estimating the correct parameters on real data.
+We can use the simulations to see if our model can successfully estimate the parameters used to generate fake data (the implied $\hat{y}$). Take a draw from the prior samples (e.g. the 50th simulation) and estimate the model on the data produced by these parameters. Let's see if the model fitted on fake data can capture the "true" parameters (dotted red lines) of the data generating process. If the model cannot capture the _known_ parameters which generated fake data, there is no certainty it will be estimating the correct parameters on real data.
 
 ```{r eval=FALSE}
 # Pick random simulation, let's say 50
