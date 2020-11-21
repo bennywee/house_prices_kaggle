@@ -570,11 +570,14 @@ Reversing the data transformations gives back the posterior predictive checks on
 
 ```{python,eval=FALSE}
 fig, axes = plt.subplots(1,1, figsize = (13, 8))
-np.exp(fit_npm_df.filter(regex = 'y_hat')*df['log_sales_price'].std()+df['log_sales_price'].mean()).T.iloc[:, :300].plot.kde(legend = False, 
-                                                                                                  title = 'Posterior predictive Checks - Black: Observed Sale Price, blue: posterior samples', 
-                                                                                                  xlim = (30000,500000),
-                                                                                                  alpha = 0.08,
-                                                                                                  ax = axes, color = 'aqua');
+np.exp(fit_npm_df.filter(regex = 'y_hat')*df['log_sales_price'].std()+df['log_sales_price'].mean())\
+                 .T\
+                 .iloc[:, :300]\
+                 .plot.kde(legend = False, 
+                           title = 'Posterior predictive Checks - Black: Observed Sale Price, blue: posterior samples', 
+                           xlim = (30000,500000),
+                           alpha = 0.08,
+                           ax = axes, color = 'aqua');
 
 df['SalePrice'].plot.kde(legend = False, 
                          xlim = (30000,500000),
